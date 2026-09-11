@@ -197,9 +197,15 @@ drain() {
     return 0
 }
 
+# A dry run only prints commands, so it has no business insisting the tools are
+# installed -- reading the commands on a machine without them is a fair use.
 if ! have nmap; then
-    echo -e "${RED}[!] nmap not found; it drives every stage of this script. Install: apt install nmap${NC}"
-    exit 1
+    if [[ $DRY_RUN -eq 1 ]]; then
+        echo -e "${YEL}[!] nmap not found, but this is a dry run: commands are printed, not run.${NC}"
+    else
+        echo -e "${RED}[!] nmap not found; it drives every stage of this script. Install: apt install nmap${NC}"
+        exit 1
+    fi
 fi
 
 echo -e "${GRN}[*] Target: $IP  ${TARGET_HOST:+(host: $TARGET_HOST)}${NC}"
