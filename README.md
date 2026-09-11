@@ -66,7 +66,7 @@ python3 -m http.server 8000    # then open http://localhost:8000
 | `-u` | also run a UDP top-ports scan (needs sudo). With `-j N` it runs in the background and is collected at the end |
 | `-n` | also run nikto on web ports (slow) |
 | `-j N` | run up to N service blocks at once. Output is buffered per block and printed in a fixed order, so it stays readable; `-j 4` typically halves the wall clock. Default 1 |
-| `--dry-run` | print and log every command without running any of them — useful for reading the commands, or checking what a target would get hit with |
+| `--dry-run` | print and log every command without running any of them — useful for reading the commands, or checking what a target would get hit with. Works without the tools installed |
 | `--force` | redo steps whose output file already exists. By default they are skipped, so a re-run after a crash does not repeat the long scans |
 
 It writes everything to `enum_<ip>/`, including `commands.log` — every command it ran, in
