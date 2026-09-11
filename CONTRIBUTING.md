@@ -35,6 +35,13 @@ Don't hand-edit `oscp-arsenal.html` — it is generated. Change
 ./build-arsenal.sh
 ```
 
+**The committed page must be byte-identical to a fresh build**, and CI checks it.
+The page markup lives in the `TPL` string inside `build-arsenal.sh`; if you
+restyle the page, change it there and regenerate, never the other way round.
+
+That job also goes red when upstream adds or changes commands — the committed
+page has gone stale. Run `./build-arsenal.sh` and commit the result.
+
 Everything written into the page comes from a third-party repository, so it all
 goes through `esc()`. If you add a new field to the template, escape it.
 

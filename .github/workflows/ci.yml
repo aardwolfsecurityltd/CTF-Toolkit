@@ -57,3 +57,21 @@ jobs:
           # every interpolated value must be escaped; a stray quote in an
           # attribute would show up as an unexpected data-cat value
           grep -o 'data-cat="[^"]*"' /tmp/arsenal.html | sort -u
+
+      # The committed page must be exactly what the builder produces, so that
+      # regenerating never silently restyles it. This step going red means one
+      # of two things:
+      #   - the generator drifted from the committed page  -> fix the generator
+      #   - upstream added or changed commands             -> ./build-arsenal.sh
+      #                                                       and commit the result
+      - name: Committed page is reproducible
+        run: |
+          if diff -q oscp-arsenal.html /tmp/arsenal.html >/dev/null; then
+            echo "OK: oscp-arsenal.html matches a fresh build byte-for-byte"
+          else
+            echo "oscp-arsenal.html differs from a fresh build:"
+            diff oscp-arsenal.html /tmp/arsenal.html | head -40
+            echo
+            echo "Run ./build-arsenal.sh and commit the result, or fix the generator."
+            exit 1
+          fi

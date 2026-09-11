@@ -74,8 +74,10 @@ The shell scripts obviously only run locally.
   strings and runs them via `bash -c`. Targets and hostnames are validated against a strict
   character allowlist first, so a target containing shell metacharacters is refused rather
   than executed.
-- `oscp-arsenal.html` is generated. Edit `build-arsenal.sh` and regenerate rather than
-  hand-editing the page.
+- `oscp-arsenal.html` is generated, and `./build-arsenal.sh` reproduces the committed page
+  byte-for-byte — regenerating refreshes the commands without restyling the page. Edit
+  `build-arsenal.sh` rather than hand-editing the page. CI checks that the two stay in step,
+  so that job going red means either the generator drifted or upstream moved.
 
 ## Contributing
 

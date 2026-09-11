@@ -93,6 +93,7 @@ for dirpath,_,files in os.walk(ROOT):
 def field(tags,pre): return [t.split("/",1)[1] for t in tags if t.startswith(pre+"/")]
 for e in entries:
     cats=field(e["tags"],"cat")
+    e["cats"]=cats
     e["cat"]=cats[0].split("/")[0] if cats else "MISC"
     e["ports"]=field(e["tags"],"port"); e["protocols"]=field(e["tags"],"protocol")
     e["platforms"]=field(e["tags"],"plateform")+field(e["tags"],"platform")
@@ -107,16 +108,19 @@ rows=[]; cur=None
 for e in entries:
     if e["section"]!=cur:
         cur=e["section"]; n=sc[cur]
-        rows.append(f'<h2 class="group"><span class="group-name">{esc(cur)}</span><span class="group-count">{n}</span></h2>')
+        rows.append(f'<h2 class="group" data-section="{esc(cur)}"><span class="group-name">{esc(cur)}</span><span class="group-count">{n}</span></h2>')
     label,colour,_=CAT_META.get(e["cat"],CAT_META["MISC"])
-    blob=" ".join([e["desc"],e["cmd"],e["tool"],e["section"],e["cat"]," ".join(e["protocols"]),
-                   " ".join("port:"+p+" "+p for p in e["ports"])]).lower()
+    blob=" ".join([e["desc"],e["cmd"],e["tool"],e["section"],e["cat"]," ".join(e["cats"][:1]),
+                   " ".join(e["protocols"]),
+                   " ".join("port:"+p+" "+p for p in e["ports"]),
+                   " ".join(e["platforms"])]).lower()
     badges=[f'<span class="badge cat" style="--c:{colour}">{esc(label)}</span>',f'<span class="badge tool">{esc(e["tool"])}</span>']
     for p in e["ports"]: badges.append(f'<span class="badge port">:{esc(p)}</span>')
     for pr in e["protocols"]: badges.append(f'<span class="badge proto">{esc(pr)}</span>')
+    for pl in e["platforms"]: badges.append(f'<span class="badge plat">{esc(pl)}</span>')
     rows.append(f'<div class="cmd" data-cat="{esc(e["cat"])}" data-section="{esc(e["section"])}" data-search="{esc(blob)}" style="--c:{colour}">'
         f'<div class="desc">{esc(e["desc"])}</div><div class="line"><code>{esc(e["cmd"])}</code>'
-        f'<button class="copy" aria-label="Copy command">copy</button></div><div class="meta">{"".join(badges)}</div></div>')
+        f'<button class="copy" aria-label="Copy command" title="Copy">copy</button></div><div class="meta">{"".join(badges)}</div></div>')
 
 chips=['<button class="chip active" data-cat="ALL">all <span class="n">%d</span></button>'%len(entries)]
 for c in CAT_ORDER:
@@ -130,81 +134,229 @@ seen.sort(key=sec_key)
 opts=['<option value="ALL">All sections</option>']+[f'<option value="{esc(s)}">{esc(s)} ({sc[s]})</option>' for s in seen]
 legend="\n".join(f'<div class="leg"><span class="dot" style="background:{CAT_META[c][1]}"></span><span class="leg-label">{esc(CAT_META[c][0])}</span><span class="leg-mean">{esc(CAT_META[c][2])}</span></div>' for c in CAT_ORDER if cc.get(c))
 
-# CSS/JS identical in spirit to the shipped page
-TPL=r"""<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>Arsenal reference</title>
+# The page template. Kept byte-identical to the shipped oscp-arsenal.html so
+# that rebuilding does not quietly restyle the page -- see CONTRIBUTING.md.
+TPL=r"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arsenal reference</title>
 <style>
-:root{--bg:#0f1319;--surface:#141a22;--elev:#1a212c;--line:#2a3342;--ink:#e7ebf2;--muted:#8b95a7;--faint:#5c6678;--accent:#5aa2ff;
---mono:ui-monospace,"JetBrains Mono","Cascadia Code","IBM Plex Mono",Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--bar:104px}
-*{box-sizing:border-box}html{scroll-padding-top:calc(var(--bar) + 8px)}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
-.bar{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--line);padding:14px 20px}
+:root{
+  --bg:#0f1319; --surface:#141a22; --elev:#1a212c; --line:#2a3342;
+  --ink:#e7ebf2; --muted:#8b95a7; --faint:#5c6678;
+  --accent:#5aa2ff;
+  --mono:ui-monospace,"JetBrains Mono","Cascadia Code","IBM Plex Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --bar:104px;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:calc(var(--bar) + 8px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+
+/* ---- sticky command bar (the hero is the prompt) ---- */
+.bar{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,var(--bg) 70%,rgba(15,19,25,.92));
+  border-bottom:1px solid var(--line);padding:14px 20px 12px}
 .bar-inner{max-width:1180px;margin:0 auto}
-.prompt{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:11px 14px}
+.prompt{display:flex;align-items:center;gap:10px;background:var(--surface);
+  border:1px solid var(--line);border-radius:8px;padding:11px 14px;
+  transition:border-color .12s,box-shadow .12s}
 .prompt:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(90,162,255,.16)}
-.prompt .glyph{color:var(--accent);font-family:var(--mono);font-weight:700;font-size:17px}
-#q{flex:1;background:transparent;border:0;outline:0;color:var(--ink);font-family:var(--mono);font-size:15px}
-.count{font-family:var(--mono);font-size:12.5px;color:var(--muted);white-space:nowrap}.count b{color:var(--ink)}
-.kbd{font-family:var(--mono);font-size:11px;color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+.prompt .glyph{color:var(--accent);font-family:var(--mono);font-weight:700;font-size:17px;line-height:1}
+#q{flex:1;background:transparent;border:0;outline:0;color:var(--ink);
+  font-family:var(--mono);font-size:15px;letter-spacing:.1px}
+#q::placeholder{color:var(--faint)}
+.count{font-family:var(--mono);font-size:12.5px;color:var(--muted);white-space:nowrap}
+.count b{color:var(--ink)}
+.kbd{font-family:var(--mono);font-size:11px;color:var(--faint);border:1px solid var(--line);
+  border-radius:4px;padding:1px 5px}
+
 .controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
-.chip{font-family:var(--mono);font-size:12px;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:999px;padding:4px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-.chip .n{color:var(--faint);font-size:11px}.chip:hover{color:var(--ink);border-color:var(--faint)}
+.chip{font-family:var(--mono);font-size:12px;color:var(--muted);background:transparent;
+  border:1px solid var(--line);border-radius:999px;padding:4px 11px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;transition:.12s}
+.chip .n{color:var(--faint);font-size:11px}
+.chip:hover{color:var(--ink);border-color:var(--faint)}
 .chip.active{color:var(--bg);background:var(--ink);border-color:var(--ink);font-weight:600}
 .chip[data-cat]:not([data-cat="ALL"]).active{background:var(--c);border-color:var(--c);color:#0b0f14}
-select{font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+.chip[data-cat]:not([data-cat="ALL"]).active .n{color:rgba(11,15,20,.6)}
+select{font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line);border-radius:6px;padding:5px 8px;cursor:pointer}
+
+/* ---- legend ---- */
 details.legend{max-width:1180px;margin:12px auto 0;padding:0 20px}
-details.legend>summary{cursor:pointer;color:var(--muted);font-size:12.5px;font-family:var(--mono);list-style:none;display:inline-flex;gap:6px;align-items:center}
+details.legend>summary{cursor:pointer;color:var(--muted);font-size:12.5px;
+  font-family:var(--mono);list-style:none;user-select:none;display:inline-flex;gap:6px;align-items:center}
 details.legend>summary::-webkit-details-marker{display:none}
-details.legend>summary::before{content:"+";color:var(--accent);font-weight:700}details.legend[open]>summary::before{content:"\2212"}
-.legend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:6px 22px;margin-top:12px}
-.leg{display:flex;align-items:baseline;gap:9px;font-size:12.5px}.leg .dot{width:9px;height:9px;border-radius:50%;flex:none;position:relative;top:1px}
-.leg-label{font-family:var(--mono);color:var(--ink);min-width:96px}.leg-mean{color:var(--muted)}
+details.legend>summary::before{content:"+";color:var(--accent);font-weight:700}
+details.legend[open]>summary::before{content:"\2212"}
+.legend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+  gap:6px 22px;margin-top:12px}
+.leg{display:flex;align-items:baseline;gap:9px;font-size:12.5px}
+.leg .dot{width:9px;height:9px;border-radius:50%;flex:none;position:relative;top:1px}
+.leg-label{font-family:var(--mono);color:var(--ink);min-width:96px}
+.leg-mean{color:var(--muted)}
+
+/* ---- list ---- */
 main{max-width:1180px;margin:0 auto;padding:8px 20px 120px}
-.group{position:sticky;top:var(--bar);z-index:10;margin:26px 0 2px;padding:7px 0;background:var(--bg);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--muted);display:flex;gap:10px}
-.group-name{color:var(--ink)}.group-count{color:var(--faint);font-weight:400}
-.cmd{border-left:2px solid var(--c);padding:11px 0 11px 14px;border-bottom:1px solid rgba(42,51,66,.5)}
+.group{position:sticky;top:var(--bar);z-index:10;margin:26px 0 2px;
+  padding:7px 0 7px;background:var(--bg);
+  border-bottom:1px solid var(--line);
+  font-family:var(--mono);font-size:12.5px;font-weight:600;letter-spacing:.4px;
+  color:var(--muted);display:flex;align-items:center;gap:10px}
+.group-name{color:var(--ink)}
+.group-count{color:var(--faint);font-weight:400}
+
+.cmd{border-left:2px solid var(--c);padding:11px 0 11px 14px;
+  border-bottom:1px solid rgba(42,51,66,.5)}
 .cmd .desc{color:var(--ink);font-size:13.5px;margin-bottom:6px;max-width:74ch}
-.line{display:flex;align-items:flex-start;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:9px 11px}
-.line code{font-family:var(--mono);font-size:13px;color:#d7e3f4;white-space:pre-wrap;word-break:break-word;flex:1;line-height:1.55}
-.copy{flex:none;font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--elev);border:1px solid var(--line);border-radius:5px;padding:3px 9px;cursor:pointer}
-.copy:hover{color:var(--ink);border-color:var(--faint)}.copy.ok{color:#0b0f14;background:#34d399;border-color:#34d399}
+.line{display:flex;align-items:flex-start;gap:10px;background:var(--surface);
+  border:1px solid var(--line);border-radius:6px;padding:9px 11px}
+.line code{font-family:var(--mono);font-size:13px;color:#d7e3f4;white-space:pre-wrap;
+  word-break:break-word;flex:1;line-height:1.55}
+.copy{flex:none;font-family:var(--mono);font-size:11px;color:var(--muted);
+  background:var(--elev);border:1px solid var(--line);border-radius:5px;
+  padding:3px 9px;cursor:pointer;transition:.12s}
+.copy:hover{color:var(--ink);border-color:var(--faint)}
+.copy.ok{color:#0b0f14;background:#34d399;border-color:#34d399}
 .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
-.badge{font-family:var(--mono);font-size:10.5px;padding:1.5px 7px;border-radius:4px;border:1px solid var(--line);color:var(--muted)}
-.badge.cat{color:var(--c);border-color:color-mix(in srgb,var(--c) 45%,var(--line))}.badge.port{color:#cbd5e1}
-.empty{display:none;text-align:center;color:var(--muted);padding:80px 20px;font-family:var(--mono)}.empty.show{display:block}
+.badge{font-family:var(--mono);font-size:10.5px;padding:1.5px 7px;border-radius:4px;
+  border:1px solid var(--line);color:var(--muted);letter-spacing:.2px}
+.badge.cat{color:var(--c);border-color:color-mix(in srgb,var(--c) 45%,var(--line))}
+.badge.port{color:#cbd5e1}
+.badge.proto,.badge.plat{color:var(--muted)}
+
+.empty{display:none;text-align:center;color:var(--muted);padding:80px 20px;
+  font-family:var(--mono);font-size:13px}
+.empty.show{display:block}
 .hidden{display:none!important}
-@media (max-width:620px){:root{--bar:150px}.line{flex-direction:column;gap:8px}}
-</style></head><body>
-<div class="bar"><div class="bar-inner">
-<label class="prompt"><span class="glyph">&#10095;</span>
-<input id="q" type="text" autocomplete="off" spellcheck="false" placeholder="search __N__ commands">
-<span class="count"><b id="shown">__N__</b> / __N__</span><span class="kbd">/</span></label>
-<div class="controls"><div class="chips" id="chips">__CHIPS__</div><select id="section">__OPTS__</select></div>
-</div></div>
-<details class="legend"><summary>what the phase colours mean</summary><div class="legend-grid">__LEGEND__</div></details>
-<main id="list">__ROWS__<div class="empty" id="empty">no commands match.</div></main>
+
+@media (max-width:620px){
+  :root{--bar:150px}
+  .line{flex-direction:column;gap:8px}
+  .copy{align-self:flex-start}
+  .cmd .desc{max-width:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="bar-inner">
+    <label class="prompt">
+      <span class="glyph">&#10095;</span>
+      <input id="q" type="text" autocomplete="off" spellcheck="false"
+        placeholder="search __N__ commands:  kerberoast &middot; port 445 &middot; privesc &middot; reverse shell">
+      <span class="count"><b id="shown">__N__</b> / __N__</span>
+      <span class="kbd">/</span>
+    </label>
+    <div class="controls">
+      <div class="chips" id="chips">
+        __CHIPS__
+      </div>
+      <select id="section">
+        __OPTS__
+      </select>
+    </div>
+  </div>
+</div>
+
+<details class="legend">
+  <summary>what the phase colours mean</summary>
+  <div class="legend-grid">
+    __LEGEND__
+  </div>
+</details>
+
+<main id="list">
+  __ROWS__
+  <div class="empty" id="empty">no commands match. clear the search or pick a different phase.</div>
+</main>
+
 <script>
-(function(){const q=document.getElementById('q'),shown=document.getElementById('shown'),empty=document.getElementById('empty');
-const cmds=[...document.querySelectorAll('.cmd')],groups=[...document.querySelectorAll('.group')],chips=[...document.querySelectorAll('.chip')],sectionSel=document.getElementById('section');
-let cat='ALL',section='ALL',term='';
-function apply(){const words=term.split(/\s+/).filter(Boolean);let vis=0;
-for(const el of cmds){let ok=true;if(cat!=='ALL'&&el.dataset.cat!==cat)ok=false;
-if(ok&&section!=='ALL'&&el.dataset.section!==section)ok=false;
-if(ok&&words.length){const hay=el.dataset.search;for(const w of words){if(!hay.includes(w)){ok=false;break;}}}
-el.classList.toggle('hidden',!ok);if(ok)vis++;}
-for(const g of groups){let n=g.nextElementSibling,any=false;while(n&&!n.classList.contains('group')){if(n.classList.contains('cmd')&&!n.classList.contains('hidden')){any=true;break;}n=n.nextElementSibling;}g.classList.toggle('hidden',!any);}
-shown.textContent=vis;empty.classList.toggle('show',vis===0);}
-q.addEventListener('input',()=>{term=q.value.trim().toLowerCase();apply();});
-chips.forEach(c=>c.addEventListener('click',()=>{chips.forEach(x=>x.classList.remove('active'));c.classList.add('active');cat=c.dataset.cat;apply();}));
-sectionSel.addEventListener('change',()=>{section=sectionSel.value;apply();});
-document.getElementById('list').addEventListener('click',async e=>{const b=e.target.closest('.copy');if(!b)return;
-const code=b.parentElement.querySelector('code').textContent;
-try{await navigator.clipboard.writeText(code);}catch(_){const t=document.createElement('textarea');t.value=code;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();}
-const o=b.textContent;b.textContent='copied';b.classList.add('ok');setTimeout(()=>{b.textContent=o;b.classList.remove('ok');},1100);});
-document.addEventListener('keydown',e=>{if(e.key==='/'&&document.activeElement!==q){e.preventDefault();q.focus();}else if(e.key==='Escape'&&document.activeElement===q){q.value='';term='';apply();q.blur();}});
-try{const qp=new URLSearchParams(location.search).get('q');if(qp){q.value=qp;term=qp.trim().toLowerCase();apply();}}catch(_){}})();
-</script></body></html>"""
+(function(){
+  const q = document.getElementById('q');
+  const shown = document.getElementById('shown');
+  const empty = document.getElementById('empty');
+  const cmds = Array.from(document.querySelectorAll('.cmd'));
+  const groups = Array.from(document.querySelectorAll('.group'));
+  const chips = Array.from(document.querySelectorAll('.chip'));
+  const sectionSel = document.getElementById('section');
+
+  let cat = 'ALL', section = 'ALL', term = '';
+
+  function apply(){
+    const words = term.split(/\s+/).filter(Boolean);
+    let vis = 0;
+    for(const el of cmds){
+      let ok = true;
+      if(cat !== 'ALL' && el.dataset.cat !== cat) ok = false;
+      if(ok && section !== 'ALL' && el.dataset.section !== section) ok = false;
+      if(ok && words.length){
+        const hay = el.dataset.search;
+        for(const w of words){ if(!hay.includes(w)){ ok = false; break; } }
+      }
+      el.classList.toggle('hidden', !ok);
+      if(ok) vis++;
+    }
+    // hide group headers whose section has no visible rows
+    for(const g of groups){
+      let n = g.nextElementSibling, any = false;
+      while(n && !n.classList.contains('group')){
+        if(n.classList.contains('cmd') && !n.classList.contains('hidden')){ any = true; break; }
+        n = n.nextElementSibling;
+      }
+      g.classList.toggle('hidden', !any);
+    }
+    shown.textContent = vis;
+    empty.classList.toggle('show', vis === 0);
+  }
+
+  q.addEventListener('input', ()=>{ term = q.value.trim().toLowerCase(); apply(); });
+
+  chips.forEach(c=>c.addEventListener('click', ()=>{
+    chips.forEach(x=>x.classList.remove('active'));
+    c.classList.add('active');
+    cat = c.dataset.cat;
+    apply();
+  }));
+
+  sectionSel.addEventListener('change', ()=>{ section = sectionSel.value; apply(); });
+
+  // copy buttons
+  document.getElementById('list').addEventListener('click', async (e)=>{
+    const btn = e.target.closest('.copy');
+    if(!btn) return;
+    const code = btn.parentElement.querySelector('code').textContent;
+    try{ await navigator.clipboard.writeText(code); }
+    catch(_){ const t=document.createElement('textarea'); t.value=code;
+      document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+    const old = btn.textContent; btn.textContent='copied'; btn.classList.add('ok');
+    setTimeout(()=>{ btn.textContent=old; btn.classList.remove('ok'); }, 1100);
+  });
+
+  // keyboard: "/" focus, Esc clear
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === '/' && document.activeElement !== q){ e.preventDefault(); q.focus(); }
+    else if(e.key === 'Escape' && document.activeElement === q){
+      q.value=''; term=''; apply(); q.blur();
+    }
+  });
+
+  // deep link: oscp-arsenal.html?q=smb  pre-fills the search (used by the playbook cross-links)
+  try{
+    const qp = new URLSearchParams(location.search).get('q');
+    if(qp){ q.value = qp; term = qp.trim().toLowerCase(); apply(); }
+  }catch(_){}
+})();
+</script>
+</body>
+</html>
+"""
 
 out=(TPL.replace("__CHIPS__","\n".join(chips)).replace("__OPTS__","\n".join(opts))
         .replace("__LEGEND__",legend).replace("__ROWS__","\n".join(rows)).replace("__N__",str(len(entries))))
