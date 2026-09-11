@@ -34,10 +34,12 @@ if (JSDOM) {
   test("playbook renders every track and tool without errors", () => {
     const {window, d, errors} = boot("playbook.html");
     assert.deepEqual(errors, [], "script errors on load");
-    assert.equal(d.querySelectorAll("#tracks .track-pill").length, 11, "10 tracks + overview");
+    assert.equal(d.querySelectorAll("#tracks .track-pill").length, 12, "11 tracks + overview");
     assert.equal(d.querySelectorAll("#tools .track-pill").length, 7, "7 tools");
     assert.ok([...d.querySelectorAll("#tracks .track-pill")].some(p => p.dataset.id === "container"),
       "container escape track missing");
+    assert.ok([...d.querySelectorAll("#tracks .track-pill")].some(p => p.dataset.id === "adcs"),
+      "ADCS track missing");
     assert.ok(d.querySelector("#boxPick"), "box picker missing");
     assert.ok(d.querySelector(".empty-cta"), "first-run call to action missing");
     assert.ok(d.querySelector("#stuckLive .cue"), "stuck panel has no live cue");

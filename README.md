@@ -22,7 +22,8 @@ across the top, so you can move between them without going back to the launcher.
 ## What's inside
 
 - **playbook.html** — the command centre. Switchable tracks (recon, web, Linux, Windows,
-  Active Directory, pivoting, container escape, buffer overflow, passwords, AV evasion) plus
+  Active Directory, AD certificate services & delegation, pivoting, container escape, buffer overflow,
+  passwords, AV evasion) plus
   tools that open full-screen: a scan planner (paste or drop nmap output → per-service
   commands + box-type routing), a reverse-shell generator, a hash identifier, an exploit
   suggester (with optional live NVD lookup), a proof checklist, a per-box credentials, notes
@@ -152,7 +153,7 @@ The shell scripts obviously only run locally.
 
 ## Versions
 
-`v1.2.2`. The version shows in the nav bar of every page, so you can tell whether an
+`v1.3.0`. The version shows in the nav bar of every page, so you can tell whether an
 offline copy is current. Tagging `v*` builds an offline zip and attaches it to the release;
 the repo does not carry a bundle that can go stale.
 
