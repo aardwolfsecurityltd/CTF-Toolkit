@@ -1767,9 +1767,25 @@ document.getElementById("overlayScrim").onclick=closeOverlay;
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!_overlay.hidden)closeOverlay();});
 
 // ---------- condensing bar on scroll ----------
-let _compact=false;
-function onScroll(){const y=window.scrollY||document.documentElement.scrollTop||0;const c=y>70;if(c!==_compact){_compact=c;document.querySelector(".bar").classList.toggle("compact",c);}}
-window.addEventListener("scroll",()=>requestAnimationFrame(onScroll),{passive:true});
+// .bar is position:sticky, so it stays in normal flow and its height counts
+// toward the document height. Collapsing it shortens the page; if less scroll
+// room is left than it sheds, the browser clamps scrollY back under the
+// threshold, the bar re-expands, the page grows, and the two states flip every
+// frame. The hysteresis band and the slack check below make that impossible.
+let _compact=false,_ticking=false;
+const BAR_ON=120,BAR_OFF=60;
+function onScroll(){
+  _ticking=false;
+  const bar=document.querySelector(".bar");if(!bar)return;
+  const y=window.scrollY||document.documentElement.scrollTop||0;
+  let c=_compact;
+  if(!_compact&&y>BAR_ON){
+    const slack=document.documentElement.scrollHeight-window.innerHeight-y;
+    if(slack>bar.offsetHeight)c=true;   // only collapse if the page can absorb it
+  }else if(_compact&&y<BAR_OFF){c=false;}
+  if(c!==_compact){_compact=c;bar.classList.toggle("compact",c);}
+}
+window.addEventListener("scroll",()=>{if(!_ticking){_ticking=true;requestAnimationFrame(onScroll);}},{passive:true});
 
 // ---------- home link ----------
 const _h1=document.querySelector(".bar-top h1");if(_h1)_h1.onclick=renderOverview;
