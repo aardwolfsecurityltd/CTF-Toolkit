@@ -18,7 +18,8 @@ Keep all files in the same folder so the cross-links work (the launcher, and the
 ## What's inside
 
 - **oscp-playbook.html** — the command centre. Switchable tracks (recon, web, Linux, Windows,
-  Active Directory, pivoting, buffer overflow, passwords) plus tools that open full-screen:
+  Active Directory, pivoting, buffer overflow, passwords, AV evasion) plus tools that open
+  full-screen:
   a scan planner (paste nmap → per-service commands + box-type routing), a reverse-shell
   generator, a hash identifier, an exploit suggester (with optional live NVD lookup), a proof
   checklist, a per-box credentials/notes tracker, a timer, per-step evidence capture, and an
