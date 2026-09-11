@@ -34,8 +34,10 @@ if (JSDOM) {
   test("playbook renders every track and tool without errors", () => {
     const {window, d, errors} = boot("playbook.html");
     assert.deepEqual(errors, [], "script errors on load");
-    assert.equal(d.querySelectorAll("#tracks .track-pill").length, 10, "9 tracks + overview");
-    assert.equal(d.querySelectorAll("#tools .track-pill").length, 6, "6 tools");
+    assert.equal(d.querySelectorAll("#tracks .track-pill").length, 11, "10 tracks + overview");
+    assert.equal(d.querySelectorAll("#tools .track-pill").length, 7, "7 tools");
+    assert.ok([...d.querySelectorAll("#tracks .track-pill")].some(p => p.dataset.id === "container"),
+      "container escape track missing");
     assert.ok(d.querySelector("#boxPick"), "box picker missing");
     assert.ok(d.querySelector(".empty-cta"), "first-run call to action missing");
     assert.ok(d.querySelector("#stuckLive .cue"), "stuck panel has no live cue");
@@ -178,6 +180,45 @@ if (JSDOM) {
     ip.dispatchEvent(new window.Event("input", {bubbles: true}));
     const filled = d.querySelectorAll(".cmd:not(.hidden) code .ph.filled");
     assert.ok(filled.length > 0, "setting IP filled no placeholders");
+    window.close();
+  });
+
+  test("findings are editable, persist, and flow into the write-up", () => {
+    const {window, d} = boot("playbook.html");
+    const box = d.getElementById("v_BOX");
+    box.value = "fnd";
+    box.dispatchEvent(new window.Event("input", {bubbles: true}));
+
+    [...d.querySelectorAll("#tools .track-pill")].find(p => p.dataset.id === "__findings")
+      .dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
+    assert.ok(d.querySelector(".fnd-empty"), "findings should start with an empty state");
+
+    d.querySelector(".fnd-add").dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
+    const card = d.querySelector(".fnd");
+    assert.ok(card, "adding a finding rendered no card");
+
+    const title = card.querySelector(".title");
+    title.value = "SQL injection in /login";
+    title.dispatchEvent(new window.Event("input", {bubbles: true}));
+    const sev = card.querySelector("select.sev");
+    sev.value = "high";
+    sev.dispatchEvent(new window.Event("change", {bubbles: true}));
+    const desc = card.querySelector(".desc");
+    desc.value = "The user parameter is injectable; UNION select dumps the users table.";
+    desc.dispatchEvent(new window.Event("input", {bubbles: true}));
+
+    const stored = JSON.parse(window.localStorage.getItem("findings:fnd"));
+    assert.equal(stored.length, 1);
+    assert.equal(stored[0].title, "SQL injection in /login");
+    assert.equal(stored[0].severity, "high");
+
+    // it should now appear in the write-up's Findings section
+    [...d.querySelectorAll("#tools .track-pill")].find(p => p.dataset.id === "__writeup")
+      .dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
+    const report = d.querySelector(".wu-preview").textContent;
+    assert.match(report, /Findings/);
+    assert.match(report, /SQL injection in \/login/);
+    assert.match(report, /HIGH/);
     window.close();
   });
 
