@@ -234,6 +234,43 @@ if (JSDOM) {
     window.close();
   });
 
+  // A step command is a template: {IP}, {LHOST} and friends are swapped for the
+  // target variables at render time, and any other {BRACES} become "<lowercase>".
+  // For a standalone placeholder ({WPTOKEN}) that is the intent. For shell
+  // parameter expansion it is a silent corruption -- ${IFS} would render as
+  // $<ifs> and the command would no longer work when pasted.
+  test("no step command hides shell expansion from the token substituter", () => {
+    const {window, d} = boot("playbook.html");
+    try {
+      // Deliberate fill-me-in placeholders, which render as <lowercase> on purpose.
+      const placeholders = new Set(["WPTOKEN"]);
+      const resolved = new Set(["BOX", "IP", "LHOST", "LPORT", "DOMAIN", "USER", "PASS", "HOST"]);
+      const eaten = [], unknown = [];
+      let scanned = 0;
+      for (const pill of d.querySelectorAll("#tracks .track-pill")) {
+        pill.dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
+        for (const el of d.querySelectorAll("#phases .cmdtext[data-tpl]")) {
+          const tpl = el.dataset.tpl;
+          scanned++;
+          // ${FOO} -- the substituter eats the {FOO} and leaves a broken $
+          for (const m of tpl.matchAll(/\$\{([A-Z]+)\}/g)) {
+            eaten.push(m[0] + " in: " + tpl.slice(0, 70));
+          }
+          for (const m of tpl.matchAll(/\{([A-Z]+)\}/g)) {
+            if (!resolved.has(m[1]) && !placeholders.has(m[1])) {
+              unknown.push(m[1] + " in: " + tpl.slice(0, 70));
+            }
+          }
+        }
+      }
+      assert.ok(scanned > 50, "no command templates found -- did the tracks render?");
+      assert.deepEqual(eaten, [], "shell ${EXPANSION} will be mangled by substitute()");
+      assert.deepEqual(unknown, [], "unresolvable {TOKEN} in a step command");
+    } finally {
+      window.close();
+    }
+  });
+
   test("launcher renders and every card points somewhere real", () => {
     const {d, window} = boot("index.html");
     const cards = [...d.querySelectorAll("a.card")];

