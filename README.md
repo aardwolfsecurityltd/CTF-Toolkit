@@ -47,9 +47,18 @@ python3 -m http.server 8000    # then open http://localhost:8000
 
 ## Running it online
 
+**https://aardwolfsecurityltd.github.io/CTF-Toolkit/**
+
 The `Deploy to GitHub Pages` workflow publishes the repo root as a static site, so the
-launcher, playbook and arsenal are browsable without cloning. Enable it once under
-**Settings → Pages → Source: GitHub Actions**.
+launcher, playbook and arsenal are browsable without cloning.
+
+Pages has to be turned on once by a repo admin — `GITHUB_TOKEN` isn't allowed to create the
+site itself, so `configure-pages`' `enablement` option fails with "Resource not accessible by
+integration". Either **Settings → Pages → Source: GitHub Actions**, or:
+
+```
+gh api -X POST repos/OWNER/REPO/pages -f build_type=workflow
+```
 
 The shell scripts obviously only run locally.
 
