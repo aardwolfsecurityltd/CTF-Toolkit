@@ -1,0 +1,60 @@
+name: Release
+
+# Builds the offline bundle from a tag, rather than keeping a zip in the repo
+# that silently goes stale against the files beside it.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (for a manual run)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    name: Build the offline bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check the generated pages are current
+        run: |
+          ./build-cheatsheet.sh /tmp/cheatsheet.html
+          diff -q cheatsheet.html /tmp/cheatsheet.html || {
+            echo "cheatsheet.html is stale; run ./build-cheatsheet.sh and commit before tagging."; exit 1; }
+          ./build-arsenal.sh /tmp/arsenal.html
+          diff -q arsenal.html /tmp/arsenal.html || {
+            echo "arsenal.html is stale; run ./build-arsenal.sh and commit before tagging."; exit 1; }
+
+      - name: Assemble
+        run: |
+          ver="${GITHUB_REF_NAME:-${{ inputs.tag }}}"
+          ver="${ver:-dev}"
+          dir="pentest-toolkit-$ver"
+          mkdir -p "$dir"
+          cp index.html playbook.html arsenal.html cheatsheet.html 404.html \
+             oscp-playbook.html oscp-arsenal.html oscp-cheatsheet.html \
+             cheatsheet.md enum.sh build-arsenal.sh build-cheatsheet.sh \
+             README.md CONTRIBUTING.md SECURITY.md LICENSE "$dir/"
+          chmod +x "$dir"/*.sh
+          zip -r "pentest-toolkit-$ver.zip" "$dir"
+          echo "BUNDLE=pentest-toolkit-$ver.zip" >> "$GITHUB_ENV"
+          unzip -l "pentest-toolkit-$ver.zip"
+
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.BUNDLE }}
+          generate_release_notes: true
+
+      - name: Upload as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: offline-bundle
+          path: ${{ env.BUNDLE }}

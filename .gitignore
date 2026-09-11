@@ -12,3 +12,10 @@ nmap-*.txt
 .DS_Store
 *.swp
 *~
+
+# enum.sh per-target output
+enum_*/
+
+# test harness (jsdom is installed on demand, never committed)
+node_modules/
+package-lock.json

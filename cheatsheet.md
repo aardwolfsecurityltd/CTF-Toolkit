@@ -1,4 +1,4 @@
-# OSCP syntax cheat sheet
+# Pentest syntax cheat sheet
 
 Placeholders: `<ip>` target, `<host>` hostname/FQDN, `<user>` `<pass>` creds, `<domain>` AD domain, `<lhost>` your VPN IP, `<lport>` your listener port.
 
@@ -12,11 +12,17 @@ export LPORT=443
 
 ---
 
-## Exam tool rules (read this first)
+## Scope and tool rules (read this first)
+
+Run this against systems you own, a lab or CTF you are registered with, or an engagement with a signed scope. Nothing else.
+
+**On a certification exam** the tooling is usually restricted, and the OSCP rules are the strictest you are likely to meet:
 
 Allowed: manual tools, nmap, targeted nmap scripts, one-off exploits, `netexec`, impacket, evil-winrm, Burp community, linpeas/winpeas, targeted Metasploit **on a single machine only**.
 
-Not allowed: `sqlmap`, automated exploitation (db_autopwn, browser_autopwn), mass vulnerability scanners (Nessus, OpenVAS, Nikto is fine as it is not an exploit scanner but treat with care), and Metasploit auto-exploit beyond your one permitted box. When in doubt, do it by hand.
+Not allowed: `sqlmap`, automated exploitation (db_autopwn, browser_autopwn), mass vulnerability scanners (Nessus, OpenVAS; Nikto is fine as it is not an exploit scanner but treat with care), and Metasploit auto-exploit beyond your one permitted box. When in doubt, do it by hand.
+
+On a CTF or your own lab none of that applies — but working by hand is still how you learn what the automated tool was doing.
 
 ---
 
