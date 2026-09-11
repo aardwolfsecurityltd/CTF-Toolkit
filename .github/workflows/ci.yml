@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shell:
+    name: Shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax check
+        run: bash -n oscp-enum.sh build-arsenal.sh
+
+      # Both scripts are clean at default severity; keep them that way.
+      - name: ShellCheck
+        run: shellcheck oscp-enum.sh build-arsenal.sh
+
+      - name: Scripts are executable
+        run: |
+          for f in oscp-enum.sh build-arsenal.sh; do
+            test -x "$f" || { echo "$f is not executable (git update-index --chmod=+x $f)"; exit 1; }
+          done
+
+      - name: Help output works without a target
+        run: ./oscp-enum.sh --help
+
+      - name: Target validation rejects shell metacharacters
+        run: |
+          if ./oscp-enum.sh '1.2.3.4; touch /tmp/pwned'; then
+            echo "FAIL: injected target was accepted"; exit 1
+          fi
+          test ! -e /tmp/pwned || { echo "FAIL: injected command ran"; exit 1; }
+          echo "OK: metacharacters in target rejected"
+
+  arsenal:
+    name: Arsenal builder
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rebuild the arsenal page from upstream
+        run: ./build-arsenal.sh /tmp/arsenal.html
+
+      - name: Generated page looks sane
+        run: |
+          n=$(grep -c 'class="cmd"' /tmp/arsenal.html)
+          echo "commands parsed: $n"
+          [ "$n" -gt 500 ] || { echo "FAIL: only $n commands parsed, expected >500"; exit 1; }
+          # every interpolated value must be escaped; a stray quote in an
+          # attribute would show up as an unexpected data-cat value
+          grep -o 'data-cat="[^"]*"' /tmp/arsenal.html | sort -u

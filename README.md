@@ -1,7 +1,12 @@
 # Pentest toolkit (OSCP / CTF)
 
+[![CI](https://github.com/aardwolfsecurityltd/CTF-Toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/aardwolfsecurityltd/CTF-Toolkit/actions/workflows/ci.yml)
+
 An offline, browser-and-shell toolkit for authorised penetration testing and OSCP/CTF practice.
 Everything runs locally. No data leaves the machine.
+
+> **Authorised testing only.** Use this against systems you own or have explicit written
+> permission to test. See [SECURITY.md](SECURITY.md).
 
 ## Open this first
 
@@ -25,7 +30,7 @@ Keep all files in the same folder so the cross-links work (the launcher, and the
 - **oscp-enum.sh** — first-pass enumeration runner. Scans, then fires the right per-service
   tools, printing and logging every command. Usage: `./oscp-enum.sh <ip>`
 - **build-arsenal.sh** — re-clones the upstream repo and rebuilds oscp-arsenal.html so it never
-  goes stale. Usage: `./build-arsenal.sh`
+  goes stale. Usage: `./build-arsenal.sh [output.html]`
 
 ## Setup
 
@@ -40,6 +45,14 @@ browser on a local file (CORS), serve the folder instead:
 python3 -m http.server 8000    # then open http://localhost:8000
 ```
 
+## Running it online
+
+The `Deploy to GitHub Pages` workflow publishes the repo root as a static site, so the
+launcher, playbook and arsenal are browsable without cloning. Enable it once under
+**Settings → Pages → Source: GitHub Actions**.
+
+The shell scripts obviously only run locally.
+
 ## Notes
 
 - Authorised testing only. Where a tool or technique is off-limits on the OSCP exam
@@ -48,3 +61,20 @@ python3 -m http.server 8000    # then open http://localhost:8000
   /etc/hosts); otherwise they use the IP.
 - The exploit suggester is triage, not a live vulnerability oracle: it routes you to the
   authoritative sources and flags well-known candidates. Confirm patch levels before acting.
+- `oscp-enum.sh` prints every command before running it, which means it assembles commands as
+  strings and runs them via `bash -c`. Targets and hostnames are validated against a strict
+  character allowlist first, so a target containing shell metacharacters is refused rather
+  than executed.
+- `oscp-arsenal.html` is generated. Edit `build-arsenal.sh` and regenerate rather than
+  hand-editing the page.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Both shell scripts are shellcheck-clean and CI
+enforces it.
+
+## Licence
+
+MIT — see [LICENSE](LICENSE). The command set in `oscp-arsenal.html` is generated from the
+[Orange Cyberdefense arsenal](https://github.com/Orange-Cyberdefense/arsenal), which carries
+its own licence.
