@@ -1,0 +1,14 @@
+# Build/extract artefacts
+*.zip
+.extract/
+
+# Enumeration output (oscp-enum.sh writes per-target logs)
+loot/
+scans/
+*.log
+nmap-*.txt
+
+# Editor / OS cruft
+.DS_Store
+*.swp
+*~
