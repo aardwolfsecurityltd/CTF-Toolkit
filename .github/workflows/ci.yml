@@ -48,12 +48,19 @@ jobs:
           test ! -e /tmp/pwned2 || { echo "FAIL: injected command ran"; exit 1; }
           echo "OK: metacharacters in hostname rejected"
 
+      # Assert against the command text and the log, not the printed prefix:
+      # "[cmd]" is followed by a colour-reset escape, so a literal "[cmd] nmap"
+      # never matches.
       - name: A dry run executes nothing
         run: |
           ./enum.sh 127.0.0.1 --dry-run > dry.log 2>&1
-          grep -q '\[cmd\] nmap -p-' dry.log || { echo "FAIL: dry run printed no commands"; cat dry.log; exit 1; }
-          test ! -e enum_127.0.0.1/nmap/allports.nmap || { echo "FAIL: dry run produced scan output"; exit 1; }
-          echo "OK: dry run printed commands and ran none"
+          grep -q 'nmap -p- --min-rate' dry.log \
+            || { echo "FAIL: dry run printed no commands"; cat dry.log; exit 1; }
+          grep -q 'nmap -p- --min-rate' enum_127.0.0.1/commands.log \
+            || { echo "FAIL: dry run logged no commands"; exit 1; }
+          test ! -e enum_127.0.0.1/nmap/allports.nmap \
+            || { echo "FAIL: dry run produced scan output"; exit 1; }
+          echo "OK: dry run printed and logged commands, and ran none"
 
       - name: Rejects a nonsense job count
         run: |
