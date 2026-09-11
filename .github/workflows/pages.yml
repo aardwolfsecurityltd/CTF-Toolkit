@@ -22,16 +22,20 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/configure-pages@v5
+      # enablement turns Pages on for the repo on first run, so this doesn't
+      # need a manual trip through Settings -> Pages.
+      - uses: actions/configure-pages@v6
+        with:
+          enablement: true
 
       # The toolkit is plain static HTML with no build step; the repo root is
       # the site. Cross-links between the launcher, playbook and arsenal are
       # relative, so they work unchanged.
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: .
 
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

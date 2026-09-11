@@ -14,7 +14,7 @@ jobs:
     name: Shell scripts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Syntax check
         run: bash -n oscp-enum.sh build-arsenal.sh
@@ -44,7 +44,7 @@ jobs:
     name: Arsenal builder
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Rebuild the arsenal page from upstream
         run: ./build-arsenal.sh /tmp/arsenal.html
