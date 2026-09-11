@@ -10,15 +10,23 @@
 ###############################################################################
 set -euo pipefail
 
+for tool in git python3; do
+    command -v "$tool" >/dev/null 2>&1 || { echo "[!] $tool is required but not installed."; exit 1; }
+done
+
 OUT="${1:-oscp-arsenal.html}"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 echo "[*] Cloning Orange Cyberdefense arsenal..."
-git clone --depth 1 https://github.com/Orange-Cyberdefense/arsenal.git "$TMP/arsenal" >/dev/null 2>&1
+if ! git clone --depth 1 --quiet \
+        https://github.com/Orange-Cyberdefense/arsenal.git "$TMP/arsenal"; then
+    echo "[!] Clone failed. Check network access to github.com and try again."
+    exit 1
+fi
 
 CHEATS="$TMP/arsenal/arsenal/data/cheats"
-[ -d "$CHEATS" ] || CHEATS="$(find "$TMP/arsenal" -type d -name cheats | head -1)"
+[ -d "$CHEATS" ] || CHEATS="$(find "$TMP/arsenal" -type d -name cheats -print -quit)"
 [ -d "$CHEATS" ] || { echo "[!] Could not find the cheats directory in the repo."; exit 1; }
 
 echo "[*] Parsing and building $OUT ..."
@@ -61,7 +69,8 @@ for dirpath,_,files in os.walk(ROOT):
         rel=os.path.relpath(os.path.join(dirpath,f),ROOT).split(os.sep)
         section=SECTION_NAMES.get(rel[0],rel[0].replace("_"," "))
         tool=os.path.splitext(f)[0]
-        lines=open(os.path.join(dirpath,f),encoding="utf-8",errors="replace").read().splitlines()
+        with open(os.path.join(dirpath,f),encoding="utf-8",errors="replace") as fh:
+            lines=fh.read().splitlines()
         i=0
         while i<len(lines):
             if lines[i].startswith("## "):
@@ -92,11 +101,12 @@ entries.sort(key=lambda e:(sec_key(e["section"]),e["tool"].lower(),e["desc"].low
 esc=lambda s: html.escape(s or "",quote=True)
 from collections import Counter
 cc=Counter(e["cat"] for e in entries)
+sc=Counter(e["section"] for e in entries)
 
 rows=[]; cur=None
 for e in entries:
     if e["section"]!=cur:
-        cur=e["section"]; n=sum(1 for x in entries if x["section"]==cur)
+        cur=e["section"]; n=sc[cur]
         rows.append(f'<h2 class="group"><span class="group-name">{esc(cur)}</span><span class="group-count">{n}</span></h2>')
     label,colour,_=CAT_META.get(e["cat"],CAT_META["MISC"])
     blob=" ".join([e["desc"],e["cmd"],e["tool"],e["section"],e["cat"]," ".join(e["protocols"]),
@@ -104,7 +114,7 @@ for e in entries:
     badges=[f'<span class="badge cat" style="--c:{colour}">{esc(label)}</span>',f'<span class="badge tool">{esc(e["tool"])}</span>']
     for p in e["ports"]: badges.append(f'<span class="badge port">:{esc(p)}</span>')
     for pr in e["protocols"]: badges.append(f'<span class="badge proto">{esc(pr)}</span>')
-    rows.append(f'<div class="cmd" data-cat="{e["cat"]}" data-section="{esc(e["section"])}" data-search="{esc(blob)}" style="--c:{colour}">'
+    rows.append(f'<div class="cmd" data-cat="{esc(e["cat"])}" data-section="{esc(e["section"])}" data-search="{esc(blob)}" style="--c:{colour}">'
         f'<div class="desc">{esc(e["desc"])}</div><div class="line"><code>{esc(e["cmd"])}</code>'
         f'<button class="copy" aria-label="Copy command">copy</button></div><div class="meta">{"".join(badges)}</div></div>')
 
@@ -117,7 +127,7 @@ seen=[]
 for e in entries:
     if e["section"] not in seen: seen.append(e["section"])
 seen.sort(key=sec_key)
-opts=['<option value="ALL">All sections</option>']+[f'<option value="{esc(s)}">{esc(s)} ({sum(1 for x in entries if x["section"]==s)})</option>' for s in seen]
+opts=['<option value="ALL">All sections</option>']+[f'<option value="{esc(s)}">{esc(s)} ({sc[s]})</option>' for s in seen]
 legend="\n".join(f'<div class="leg"><span class="dot" style="background:{CAT_META[c][1]}"></span><span class="leg-label">{esc(CAT_META[c][0])}</span><span class="leg-mean">{esc(CAT_META[c][2])}</span></div>' for c in CAT_ORDER if cc.get(c))
 
 # CSS/JS identical in spirit to the shipped page
@@ -198,7 +208,8 @@ try{const qp=new URLSearchParams(location.search).get('q');if(qp){q.value=qp;ter
 
 out=(TPL.replace("__CHIPS__","\n".join(chips)).replace("__OPTS__","\n".join(opts))
         .replace("__LEGEND__",legend).replace("__ROWS__","\n".join(rows)).replace("__N__",str(len(entries))))
-open(OUT,"w",encoding="utf-8").write(out)
+with open(OUT,"w",encoding="utf-8") as fh:
+    fh.write(out)
 print("[+] %d commands written to %s" % (len(entries),OUT))
 PYEOF
 

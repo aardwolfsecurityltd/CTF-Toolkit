@@ -36,11 +36,12 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         -u|--udp)   DO_UDP=1; shift ;;
         -n|--nikto) DO_NIKTO=1; shift ;;
-        -h|--help)  grep '^#' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help)  sed -n '2,25p' "$0" | sed 's/^#\{1,\} \{0,1\}//'; exit 0 ;;
         -*)         echo "Unknown option: $1"; exit 1 ;;
         *)
             if   [[ -z "$IP" ]];          then IP="$1"
             elif [[ -z "$TARGET_HOST" ]]; then TARGET_HOST="$1"
+            else echo "Unexpected argument: $1"; exit 1
             fi
             shift ;;
     esac
@@ -48,6 +49,18 @@ done
 
 if [[ -z "$IP" ]]; then
     echo "Usage: $0 <ip> [hostname] [-u] [-n]"
+    exit 1
+fi
+
+# Commands below are built as strings and run through `bash -c` (so that the
+# exact command can be printed and learned). That makes the target shell input,
+# so accept only literal IPv4/IPv6/hostname forms -- no metacharacters.
+if ! [[ "$IP" =~ ^[A-Za-z0-9._:-]+$ ]]; then
+    echo "Refusing target '$IP': only letters, digits, dot, colon, hyphen and underscore are allowed."
+    exit 1
+fi
+if [[ -n "$TARGET_HOST" ]] && ! [[ "$TARGET_HOST" =~ ^[A-Za-z0-9._-]+$ ]]; then
+    echo "Refusing hostname '$TARGET_HOST': only letters, digits, dot, hyphen and underscore are allowed."
     exit 1
 fi
 
@@ -66,6 +79,7 @@ DIRLIST="/usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt"
 [[ -f "$DIRLIST" ]] || DIRLIST="/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt"
 [[ -f "$DIRLIST" ]] || DIRLIST="/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt"
 [[ -f "$DIRLIST" ]] || DIRLIST="/usr/share/wordlists/dirb/common.txt"
+[[ -f "$DIRLIST" ]] || DIRLIST=""
 SNMP_COMMS="/usr/share/seclists/Discovery/SNMP/common-snmp-community-strings.txt"
 
 # --------------------------------------------------------------- helpers ------
@@ -96,8 +110,18 @@ need() {  # warn (do not abort) if a tool is missing
 # is a given TCP port in the open set?
 has() { [[ ",$PORTS," == *",$1,"* ]]; }
 
+if ! have nmap; then
+    echo -e "${RED}[!] nmap not found; it drives every stage of this script. Install: apt install nmap${NC}"
+    exit 1
+fi
+
 echo -e "${GRN}[*] Target: $IP  ${TARGET_HOST:+(host: $TARGET_HOST)}${NC}"
-echo -e "${GRN}[*] Wordlist: $DIRLIST${NC}"
+if [[ -n "$DIRLIST" ]]; then
+    echo -e "${GRN}[*] Wordlist: $DIRLIST${NC}"
+else
+    echo -e "${YEL}[!] No wordlist found; web directory brute-forcing will be skipped."
+    echo -e "    Install one: apt install seclists${NC}"
+fi
 
 # ============================================================== PORT SCAN =====
 section "Port scan: $IP"
@@ -260,13 +284,19 @@ for p in 80 443 8000 8080 8443 8888 5000; do
 done
 # pick up http on non-standard ports from the version scan
 if [[ -f "$OUTDIR/nmap/detailed.nmap" ]]; then
-    for p in $(grep -iE '^[0-9]+/tcp\s+open\s+.*http' "$OUTDIR/nmap/detailed.nmap" | grep -oP '^[0-9]+'); do
+    while read -r p; do
         [[ " $WEB_PORTS " == *" $p "* ]] || WEB_PORTS="$WEB_PORTS $p"
-    done
+    done < <(grep -iE '^[0-9]+/tcp\s+open\s+.*http' "$OUTDIR/nmap/detailed.nmap" | grep -oP '^[0-9]+')
 fi
 
 for p in $WEB_PORTS; do
-    scheme="http"; [[ "$p" == "443" || "$p" == "8443" ]] && scheme="https"
+    scheme="http"
+    case "$p" in 443|8443|9443) scheme="https" ;; esac
+    # nmap labels TLS services "ssl/http" or "https"; trust that over the port number
+    if [[ -f "$OUTDIR/nmap/detailed.nmap" ]] &&
+       grep -qiE "^$p/tcp[[:space:]]+open[[:space:]]+(ssl/http|https)" "$OUTDIR/nmap/detailed.nmap"; then
+        scheme="https"
+    fi
     url="$scheme://$IP:$p"
     section "Web ($p) -> $url"
 
@@ -274,7 +304,9 @@ for p in $WEB_PORTS; do
     run "nmap -p$p --script http-enum,http-title,http-headers,http-methods,http-robots.txt -Pn $IP -oN $OUTDIR/web/nmap_http_$p.nmap"
     run "curl -sSik --max-time 15 $url/robots.txt"
 
-    if have feroxbuster; then
+    if [[ -z "$DIRLIST" ]]; then
+        echo -e "${YEL}[!] Skipping directory brute force: no wordlist.${NC}"
+    elif have feroxbuster; then
         run "feroxbuster -u $url -w $DIRLIST -t 50 -d 2 -C 404,403 -q -o $OUTDIR/web/ferox_$p.txt -x php,html,txt,asp,aspx"
     elif have ffuf; then
         run "ffuf -u $url/FUZZ -w $DIRLIST -mc all -fc 404 -t 50 -e .php,.html,.txt,.asp,.aspx -o $OUTDIR/web/ffuf_$p.json -of json"
