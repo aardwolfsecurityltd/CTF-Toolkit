@@ -331,7 +331,7 @@ main{max-width:1180px;margin:0 auto;padding:8px 20px 120px}
   <a href="arsenal.html" aria-current="page">arsenal</a>
   <a href="cheatsheet.html">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.3.1</span>
+  <span class="ver">v1.3.2</span>
 </nav>
 
 <div class="bar">

