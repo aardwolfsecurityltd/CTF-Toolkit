@@ -26,8 +26,29 @@ Please don't open a public issue for these. We'll acknowledge within a few days.
 
 ### Known hardening in place
 
-- `oscp-enum.sh` builds commands as strings and runs them through `bash -c` so
+- `enum.sh` builds commands as strings and runs them through `bash -c` so
   that each command can be printed and learned. Targets and hostnames are
   therefore validated against a strict character allowlist before use.
+- The playbook applies that same allowlist to any hostname it parses out of scan
+  output you paste or drop in, because that value is interpolated into a
+  copy-paste-ready `echo ... >> /etc/hosts` command. A hostname that does not
+  match is dropped rather than quoted.
+- Everything the playbook renders from scan text — service names, versions,
+  script output — is HTML-escaped. Scan output is untrusted input: it is
+  attacker-influenced whenever the target controls a banner.
 - `build-arsenal.sh` HTML-escapes every value taken from the upstream arsenal
-  repository before writing it into the generated page.
+  repository before writing it into the generated page, and builds from a
+  commit pinned in the script rather than whatever upstream happens to be
+  serving at the time.
+- Nothing is transmitted anywhere. The one outbound request in the toolkit is
+  the exploit suggester's NVD lookup, which is off by default and sends only the
+  product/version string you ask it to look up.
+
+### Your data
+
+The playbook stores everything — notes, credentials, screenshots — in the
+browser's `localStorage`, unencrypted, on your own machine. That is the right
+trade-off for an offline tool, but it does mean credentials from an engagement
+sit in your browser profile until you clear them. Delete the box when the
+engagement ends, and treat an exported `*-box.json` as sensitive: it contains
+every credential you recorded.

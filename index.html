@@ -4,23 +4,39 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pentest toolkit</title>
+<meta name="description" content="An offline toolkit for CTF boxes, lab machines and authorised engagements: a guided box playbook, a searchable command arsenal, a printable cheat sheet and an enumeration runner. Nothing leaves your machine.">
+<meta name="theme-color" content="#0f1319">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Pentest toolkit — CTF, labs and engagements">
+<meta property="og:description" content="A guided box playbook, a searchable command arsenal, a printable cheat sheet and an enumeration runner. Runs entirely offline.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%230f1319%22%2F%3E%3Cpath%20d%3D%22M9%2011l5%205-5%205%22%20fill%3D%22none%22%20stroke%3D%22%235aa2ff%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M18%2021h6%22%20fill%3D%22none%22%20stroke%3D%22%235aa2ff%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E">
 <style>
 :root{
   --bg:#0f1319;--surface:#141a22;--elev:#1a212c;--line:#2a3342;
-  --ink:#e7ebf2;--muted:#8b95a7;--faint:#5c6678;--accent:#5aa2ff;
+  --ink:#e7ebf2;--muted:#8b95a7;--faint:#7c8798;--accent:#5aa2ff;
   --mono:ui-monospace,"JetBrains Mono","Cascadia Code","IBM Plex Mono",Menlo,Consolas,monospace;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;
   -webkit-font-smoothing:antialiased}
-.wrap{max-width:900px;margin:0 auto;padding:56px 20px 90px}
-.head{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
+
+.topnav{display:flex;align-items:center;gap:2px;flex-wrap:wrap;padding:7px 20px;
+  background:var(--surface);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px}
+.topnav a{color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:6px}
+.topnav a:hover{color:var(--ink);background:var(--elev)}
+.topnav a[aria-current="page"]{color:var(--ink);background:var(--elev)}
+.topnav .sep{flex:1}
+.topnav .ver{color:var(--faint);font-size:11px;padding-right:8px}
+
+.wrap{max-width:900px;margin:0 auto;padding:48px 20px 90px}
+.head{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap}
 h1{font-family:var(--mono);font-size:20px;margin:0;letter-spacing:.3px}
 .head .v{font-family:var(--mono);font-size:12px;color:var(--faint)}
 .lede{color:var(--muted);font-size:14px;margin:0 0 30px;max-width:70ch}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-@media (max-width:640px){.grid{grid-template-columns:1fr}}
+@media (max-width:640px){.grid{grid-template-columns:1fr}.wrap{padding-top:32px}}
 .card{display:block;text-decoration:none;color:inherit;background:var(--surface);
   border:1px solid var(--line);border-left:3px solid var(--c);border-radius:11px;padding:18px 18px 16px;
   transition:border-color .12s,transform .12s}
@@ -30,48 +46,66 @@ h1{font-family:var(--mono);font-size:20px;margin:0;letter-spacing:.3px}
 .card .file{font-family:var(--mono);font-size:11px;color:var(--faint);margin:3px 0 9px}
 .card .desc{color:var(--muted);font-size:13px}
 .card.span{grid-column:1/-1}
-.foot{margin-top:30px;color:var(--faint);font-size:12.5px;font-family:var(--mono)}
+.sec{font-family:var(--mono);font-size:11.5px;color:var(--faint);letter-spacing:.3px;margin:26px 0 10px}
+.foot{margin-top:30px;color:var(--faint);font-size:12.5px;font-family:var(--mono);max-width:75ch;line-height:1.7}
 .foot code{color:var(--muted)}
+.foot b{color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
+
+<nav class="topnav" aria-label="Toolkit">
+  <a href="index.html" aria-current="page">launcher</a>
+  <a href="playbook.html">playbook</a>
+  <a href="arsenal.html">arsenal</a>
+  <a href="cheatsheet.html">cheat sheet</a>
+  <span class="sep"></span>
+  <span class="ver">v1.1.0</span>
+</nav>
+
 <div class="wrap">
-  <div class="head"><h1>pentest toolkit</h1><span class="v">OSCP / CTF</span></div>
-  <p class="lede">Four tools that fit together: run the enum, work out what to do with what it finds, look up any command, and keep the syntax off your shoulders. Everything runs offline in the browser or the shell, no data leaves the machine.</p>
+  <div class="head"><h1>pentest toolkit</h1><span class="v">CTF &middot; labs &middot; engagements</span></div>
+  <p class="lede">Four tools that fit together: run the enum, work out what to do with what it finds, look up any command, and keep the syntax off your shoulders &mdash; plus the two build scripts that keep the generated pages current. Built for CTF boxes, lab machines and authorised engagements &mdash; and it flags the techniques that certification exams put out of bounds. Everything runs offline in the browser or the shell, no data leaves the machine.</p>
 
   <div class="grid">
-    <a class="card span" href="oscp-playbook.html" style="--c:#c084fc">
+    <a class="card span" href="playbook.html" style="--c:#c084fc">
       <div class="name"><span class="dot"></span>Box playbook</div>
-      <div class="file">oscp-playbook.html</div>
-      <div class="desc">The command centre. Switchable tracks (recon, web, Linux, Windows, AD, pivoting, buffer overflow, passwords, AV evasion), a scan planner that reads pasted nmap output and lists per-service commands, a reverse-shell generator, a hash identifier, an exploit suggester, a proof checklist, a per-box credentials and notes tracker, per-step evidence capture with an auto write-up generator (markdown and print/PDF), a timer, and one-click report and .sh export. Set your IP once and every command fills in.</div>
+      <div class="file">playbook.html</div>
+      <div class="desc">The command centre. Switchable tracks (recon, web, Linux, Windows, AD, pivoting, buffer overflow, passwords, AV evasion), a scan planner that reads pasted or dropped nmap output and lists per-service commands, a reverse-shell generator, a hash identifier, an exploit suggester, a proof checklist, per-box credentials, notes and an attempt log, evidence capture with screenshots, and a write-up generator (markdown, HTML and print/PDF) in lab or exam shape. Set your IP once and every command fills in. Press <code>/</code> or <code>Ctrl-K</code> to search everything.</div>
     </a>
 
-    <a class="card" href="oscp-arsenal.html" style="--c:#38bdf8">
+    <a class="card" href="arsenal.html" style="--c:#38bdf8">
       <div class="name"><span class="dot"></span>Arsenal reference</div>
-      <div class="file">oscp-arsenal.html</div>
-      <div class="desc">1,028 commands from the Orange Cyberdefense arsenal, searchable and colour-coded by engagement phase. The playbook deep-links into this pre-filtered.</div>
+      <div class="file">arsenal.html</div>
+      <div class="desc">Over a thousand commands from the Orange Cyberdefense arsenal, searchable and colour-coded by engagement phase. Fills in the same target variables as the playbook, and the playbook deep-links into it pre-filtered.</div>
     </a>
 
-    <a class="card" href="oscp-cheatsheet.md" style="--c:#2dd4bf">
+    <a class="card" href="cheatsheet.html" style="--c:#2dd4bf">
       <div class="name"><span class="dot"></span>Cheat sheet</div>
-      <div class="file">oscp-cheatsheet.md</div>
-      <div class="desc">The printable quick reference, grouped by port and by phase. Best viewed in your notes app or a markdown viewer.</div>
+      <div class="file">cheatsheet.html</div>
+      <div class="desc">The quick reference, grouped by port and by phase, laid out to print on a couple of pages. The markdown source is <code>cheatsheet.md</code> if you would rather read it in your notes app.</div>
     </a>
+  </div>
 
-    <a class="card" href="oscp-enum.sh" style="--c:#f59e0b">
+  <div class="sec">shell</div>
+  <div class="grid">
+    <a class="card" href="enum.sh" style="--c:#f59e0b">
       <div class="name"><span class="dot"></span>Enum runner</div>
-      <div class="file">oscp-enum.sh</div>
-      <div class="desc">First-pass enumeration script. Scans, then fires the right per-service tools, printing and logging every command so it doubles as syntax practice. <code>./oscp-enum.sh &lt;ip&gt;</code></div>
+      <div class="file">enum.sh</div>
+      <div class="desc">First-pass enumeration script. Scans, then fires the right per-service tools, printing and logging every command so it doubles as syntax practice. Its scan file drops straight into the playbook&rsquo;s planner. <code>./enum.sh &lt;ip&gt;</code></div>
     </a>
 
     <a class="card" href="build-arsenal.sh" style="--c:#fb7185">
       <div class="name"><span class="dot"></span>Arsenal refresh</div>
       <div class="file">build-arsenal.sh</div>
-      <div class="desc">Re-clones the upstream repo and rebuilds the arsenal reference so it never goes stale. <code>./build-arsenal.sh</code></div>
+      <div class="desc">Rebuilds the arsenal reference from a pinned upstream commit, so the page is reproducible. <code>./build-arsenal.sh --latest</code> moves the pin forward.</div>
     </a>
   </div>
 
-  <p class="foot">Authorised testing only. Some entries (sqlmap, automated exploitation, Metasploit beyond the permitted box) are off-limits on the OSCP exam; the tools flag these where relevant.</p>
+  <p class="foot">Authorised testing only &mdash; systems you own, a lab you are registered with, or an engagement with a signed scope.<br>
+  Some entries (sqlmap, automated exploitation, Metasploit beyond the permitted box) are out of bounds on certification exams such as the OSCP; the tools flag these where relevant.<br>
+  <b>Your work is saved in this browser only.</b> Clearing site data deletes it &mdash; use <code>export box</code> in the playbook to keep a copy.</p>
 </div>
 </body>
 </html>

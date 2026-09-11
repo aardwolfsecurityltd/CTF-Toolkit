@@ -17,36 +17,92 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Syntax check
-        run: bash -n oscp-enum.sh build-arsenal.sh
+        run: bash -n enum.sh build-arsenal.sh build-cheatsheet.sh
 
-      # Both scripts are clean at default severity; keep them that way.
+      # All three are clean at default severity; keep them that way.
       - name: ShellCheck
-        run: shellcheck oscp-enum.sh build-arsenal.sh
+        run: shellcheck enum.sh build-arsenal.sh build-cheatsheet.sh
 
       - name: Scripts are executable
         run: |
-          for f in oscp-enum.sh build-arsenal.sh; do
+          for f in enum.sh build-arsenal.sh build-cheatsheet.sh; do
             test -x "$f" || { echo "$f is not executable (git update-index --chmod=+x $f)"; exit 1; }
           done
 
       - name: Help output works without a target
-        run: ./oscp-enum.sh --help
+        run: ./enum.sh --help
 
       - name: Target validation rejects shell metacharacters
         run: |
-          if ./oscp-enum.sh '1.2.3.4; touch /tmp/pwned'; then
+          if ./enum.sh '1.2.3.4; touch /tmp/pwned'; then
             echo "FAIL: injected target was accepted"; exit 1
           fi
           test ! -e /tmp/pwned || { echo "FAIL: injected command ran"; exit 1; }
           echo "OK: metacharacters in target rejected"
 
-  arsenal:
-    name: Arsenal builder
+      - name: Hostname validation rejects shell metacharacters
+        run: |
+          if ./enum.sh 1.2.3.4 'host; touch /tmp/pwned2'; then
+            echo "FAIL: injected hostname was accepted"; exit 1
+          fi
+          test ! -e /tmp/pwned2 || { echo "FAIL: injected command ran"; exit 1; }
+          echo "OK: metacharacters in hostname rejected"
+
+      - name: A dry run executes nothing
+        run: |
+          ./enum.sh 127.0.0.1 --dry-run > dry.log 2>&1
+          grep -q '\[cmd\] nmap -p-' dry.log || { echo "FAIL: dry run printed no commands"; cat dry.log; exit 1; }
+          test ! -e enum_127.0.0.1/nmap/allports.nmap || { echo "FAIL: dry run produced scan output"; exit 1; }
+          echo "OK: dry run printed commands and ran none"
+
+      - name: Rejects a nonsense job count
+        run: |
+          if ./enum.sh 127.0.0.1 -j 0; then echo "FAIL: -j 0 accepted"; exit 1; fi
+          if ./enum.sh 127.0.0.1 -j abc; then echo "FAIL: -j abc accepted"; exit 1; fi
+          echo "OK: job count validated"
+
+  pages:
+    name: HTML and JavaScript
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
-      - name: Rebuild the arsenal page from upstream
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # The pages ship with no build step and no dependencies; jsdom is a test
+      # harness only, installed here and never committed.
+      - name: Install the test harness
+        run: npm install --no-save --no-fund --no-audit jsdom
+
+      # Catches a syntax error in a page's inline script, which no other check
+      # would notice until someone opened the page.
+      - name: Inline scripts parse
+        run: |
+          for f in index.html playbook.html arsenal.html cheatsheet.html 404.html; do
+            node -e '
+              const fs=require("fs"), src=fs.readFileSync(process.argv[1],"utf8");
+              const blocks=[...src.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
+              if(!blocks.length){ console.log(process.argv[1]+": no inline script"); process.exit(0); }
+              blocks.forEach((b,i)=>{ new Function(b); console.log(process.argv[1]+" block "+(i+1)+": parses"); });
+            ' "$f"
+          done
+
+      - name: Tests
+        run: node --test tests/*.test.mjs
+
+  generated:
+    name: Generated pages are reproducible
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # The arsenal builds from a PINNED upstream commit, so this job tests the
+      # generator and nothing else. Upstream moving on is picked up by the
+      # scheduled arsenal-drift workflow, which opens a pull request -- it does
+      # not turn someone else's PR red.
+      - name: Rebuild the arsenal from the pinned commit
         run: ./build-arsenal.sh /tmp/arsenal.html
 
       - name: Generated page looks sane
@@ -59,19 +115,30 @@ jobs:
           grep -o 'data-cat="[^"]*"' /tmp/arsenal.html | sort -u
 
       # The committed page must be exactly what the builder produces, so that
-      # regenerating never silently restyles it. This step going red means one
-      # of two things:
-      #   - the generator drifted from the committed page  -> fix the generator
-      #   - upstream added or changed commands             -> ./build-arsenal.sh
-      #                                                       and commit the result
-      - name: Committed page is reproducible
+      # regenerating never silently restyles it. This going red means the
+      # generator drifted from the committed page -> fix the generator, or run
+      # ./build-arsenal.sh and commit the result.
+      - name: Committed arsenal matches a fresh build
         run: |
-          if diff -q oscp-arsenal.html /tmp/arsenal.html >/dev/null; then
-            echo "OK: oscp-arsenal.html matches a fresh build byte-for-byte"
+          if diff -q arsenal.html /tmp/arsenal.html >/dev/null; then
+            echo "OK: arsenal.html matches a fresh build byte-for-byte"
           else
-            echo "oscp-arsenal.html differs from a fresh build:"
-            diff oscp-arsenal.html /tmp/arsenal.html | head -40
+            echo "arsenal.html differs from a fresh build:"
+            diff arsenal.html /tmp/arsenal.html | head -40
             echo
             echo "Run ./build-arsenal.sh and commit the result, or fix the generator."
+            exit 1
+          fi
+
+      - name: Committed cheat sheet matches a fresh render
+        run: |
+          ./build-cheatsheet.sh /tmp/cheatsheet.html
+          if diff -q cheatsheet.html /tmp/cheatsheet.html >/dev/null; then
+            echo "OK: cheatsheet.html matches a fresh render of cheatsheet.md"
+          else
+            echo "cheatsheet.html is stale:"
+            diff cheatsheet.html /tmp/cheatsheet.html | head -40
+            echo
+            echo "Run ./build-cheatsheet.sh and commit the result."
             exit 1
           fi

