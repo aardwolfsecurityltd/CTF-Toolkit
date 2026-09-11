@@ -69,7 +69,7 @@ test("svcKey routes the ports the toolkit claims to cover", () => {
     [3632, "distcc", "distcc"], [5432, "postgresql", "postgres"], [5985, "wsman", "winrm"],
     [6379, "redis", "redis"], [6667, "irc", "irc"], [9200, "http", "elastic"],
     [11211, "memcached", "memcached"], [27017, "mongodb", "mongo"],
-    [69, "tftp", "tftp"], [500, "isakmp", "ike"], [123, "ntp", "ntp"],
+    [69, "tftp", "tftp"], [500, "isakmp", "ike"], [123, "ntp", "ntp"], [8009, "ajp13", "ajp"],
     [513, "login", "rservices"], [8080, "http-proxy", "web"], [4444, "banana", "unknown"],
   ];
   for (const [port, service, want] of cases) {
