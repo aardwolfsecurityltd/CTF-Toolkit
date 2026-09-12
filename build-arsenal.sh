@@ -150,20 +150,37 @@ for e in entries:
 # ones that merely depend on the target. `nc -e` stays (some builds still have it)
 # and a bare `python -c` stays (an old box may have no python3), because
 # "wrong here" and "wrong everywhere" are different problems.
+# (pattern, replacement, extra words to keep searchable). The third field
+# matters when the dead name never appeared in the text we rewrote -- upstream
+# wrote "cme", so nothing would have made "crackmapexec" findable afterwards.
 MODERNISE = [
     # Python 2 is EOL and SimpleHTTPServer does not exist in Python 3 at all.
-    (re.compile(r"\bpython\s+-m\s+SimpleHTTPServer\b"), "python3 -m http.server"),
+    (re.compile(r"\bpython\s+-m\s+SimpleHTTPServer\b"), "python3 -m http.server", ""),
     # crackmapexec is unmaintained and gone from Kali; netexec ships nxc as a
     # drop-in with the same CLI, and the playbook already uses nxc throughout.
-    (re.compile(r"(?m)^(\s*)cme\b"), r"\1nxc"),
-    (re.compile(r"\bcrackmapexec\b"), "nxc"),
+    (re.compile(r"(?m)^(\s*)cme\b"), r"\1nxc", "crackmapexec cme"),
+    (re.compile(r"\bcrackmapexec\b"), "nxc", "crackmapexec"),
+    # hcxtools removed hcxpcaptool in v6; hcxpcapngtool is the replacement.
+    (re.compile(r"\bhcxpcaptool\b"), "hcxpcapngtool", ""),
+    # cacls has been superseded by icacls since Vista and warns when run.
+    (re.compile(r"(?m)^(\s*)cacls\b"), r"\1icacls", ""),
+    # WMIC is removed from supported Windows 11 and absent from Server 2025, and
+    # is no longer even a Feature on Demand. It still works on the older targets
+    # this arsenal is mostly aimed at, so the command stays and gains a warning
+    # rather than a rewrite -- each wmic verb maps to a different CIM cmdlet.
+    (re.compile(r"(?m)^(wmic\b.*?)(\s*#.*)?$"),
+     r"\1   # gone on Win11 24H2+/Server 2025 -> Get-CimInstance / Invoke-CimMethod",
+     "Get-CimInstance Invoke-CimMethod"),
 ]
 for e in entries:
     original = e["cmd"]
-    for pat, sub in MODERNISE:
-        e["cmd"] = pat.sub(sub, e["cmd"])
-    # keep the old spelling searchable so "crackmapexec" still finds the entry
-    e["legacy"] = original if e["cmd"] != original else ""
+    aliases = []
+    for pat, sub, extra in MODERNISE:
+        if pat.search(e["cmd"]):
+            e["cmd"] = pat.sub(sub, e["cmd"])
+            if extra: aliases.append(extra)
+    # keep the old spelling searchable, so the name someone remembers still finds it
+    e["legacy"] = " ".join([original] + aliases) if e["cmd"] != original else ""
 
 entries.sort(key=lambda e:(sec_key(e["section"]),e["tool"].lower(),e["desc"].lower()))
 esc=lambda s: html.escape(s or "",quote=True)
@@ -352,7 +369,7 @@ main{max-width:1180px;margin:0 auto;padding:8px 20px 120px}
   <a href="arsenal.html" aria-current="page">arsenal</a>
   <a href="cheatsheet.html">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.6.2</span>
+  <span class="ver">v1.6.3</span>
 </nav>
 
 <div class="bar">

