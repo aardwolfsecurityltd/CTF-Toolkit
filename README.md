@@ -43,11 +43,15 @@ across the top, so you can move between them without going back to the launcher.
   tools, printing and logging every command. Usage: `./enum.sh <ip>`
 - **build-arsenal.sh** — rebuilds arsenal.html from a pinned upstream commit.
 - **build-cheatsheet.sh** — renders cheatsheet.md to cheatsheet.html.
+- **release.sh** — merges the open pull request, tags the release and pushes the tag.
+  Reads the version out of the merged code rather than taking one on the command line,
+  and refuses to release if CI is not green, the five version stamps disagree, or the
+  tag already exists. `./release.sh --dry-run` runs every check and changes nothing.
 
 ## Setup
 
 ```
-chmod +x enum.sh build-arsenal.sh build-cheatsheet.sh
+chmod +x enum.sh build-arsenal.sh build-cheatsheet.sh release.sh
 ```
 
 Open index.html in a browser. If the exploit suggester's live NVD lookup is blocked by the

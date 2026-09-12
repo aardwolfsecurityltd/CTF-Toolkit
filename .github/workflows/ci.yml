@@ -17,15 +17,15 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Syntax check
-        run: bash -n enum.sh build-arsenal.sh build-cheatsheet.sh
+        run: bash -n enum.sh build-arsenal.sh build-cheatsheet.sh release.sh
 
-      # All three are clean at default severity; keep them that way.
+      # All four are clean at default severity; keep them that way.
       - name: ShellCheck
-        run: shellcheck enum.sh build-arsenal.sh build-cheatsheet.sh
+        run: shellcheck enum.sh build-arsenal.sh build-cheatsheet.sh release.sh
 
       - name: Scripts are executable
         run: |
-          for f in enum.sh build-arsenal.sh build-cheatsheet.sh; do
+          for f in enum.sh build-arsenal.sh build-cheatsheet.sh release.sh; do
             test -x "$f" || { echo "$f is not executable (git update-index --chmod=+x $f)"; exit 1; }
           done
 
