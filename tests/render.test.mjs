@@ -35,7 +35,7 @@ if (JSDOM) {
     const {window, d, errors} = boot("playbook.html");
     assert.deepEqual(errors, [], "script errors on load");
     assert.equal(d.querySelectorAll("#tracks .track-pill").length, 12, "11 tracks + overview");
-    assert.equal(d.querySelectorAll("#tools .track-pill").length, 7, "7 tools");
+    assert.equal(d.querySelectorAll("#tools .track-pill").length, 8, "8 tools");
     assert.ok([...d.querySelectorAll("#tracks .track-pill")].some(p => p.dataset.id === "container"),
       "container escape track missing");
     assert.ok([...d.querySelectorAll("#tracks .track-pill")].some(p => p.dataset.id === "adcs"),
@@ -266,6 +266,50 @@ if (JSDOM) {
       assert.ok(scanned > 50, "no command templates found -- did the tracks render?");
       assert.deepEqual(eaten, [], "shell ${EXPANSION} will be mangled by substitute()");
       assert.deepEqual(unknown, [], "unresolvable {TOKEN} in a step command");
+    } finally {
+      window.close();
+    }
+  });
+
+  test("SUID cross-reference maps a pasted list onto GTFOBins", () => {
+    const {d, window} = boot("playbook.html");
+    try {
+      const pill = [...d.querySelectorAll(".track-pill")].find(p => p.dataset.id === "__suid");
+      assert.ok(pill, "SUID xref tool pill missing");
+      pill.dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
+      const ta = d.getElementById("suidInput");
+      ta.value = [
+        "/usr/bin/find",            // execs directly -> keeps -p
+        "/usr/bin/gdb",             // reaches the shell via system() -> caveat
+        "/usr/bin/php7.4",          // only matches after the version suffix is walked off
+        "/usr/bin/gimp-2.10",       // in GTFOBins, but with no SUID context
+        "/opt/fileS",               // custom binary, no entry at all
+        "/usr/bin/su",              // standard, must not crowd the real findings
+        "-rwsr-xr-x 1 root root 1 Jan 1 2024 /usr/bin/env", // ls -la form
+      ].join("\n");
+      ta.dispatchEvent(new window.Event("input", {bubbles: true}));
+      d.getElementById("suidBtn").dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
+
+      const out = d.getElementById("suidOut");
+      const txt = out.textContent;
+      const cmds = [...out.querySelectorAll(".cmdtext")].map(c => c.textContent);
+
+      // the command must name the binary where it actually lives, not where GTFOBins found it
+      assert.ok(cmds.some(c => /^\/usr\/bin\/find \. -exec \/bin\/sh -p /.test(c)), "find not rewritten to its real path with -p");
+      assert.ok(cmds.some(c => /^\/usr\/bin\/env \/bin\/sh -p/.test(c)), "env not parsed out of ls -la output");
+      assert.ok(cmds.some(c => /^\/usr\/bin\/php7\.4 /.test(c)), "php7.4 did not match GTFOBins' php entry");
+      assert.ok(cmds.every(c => /^\//.test(c)), "a command still starts with the bare GTFOBins name");
+
+      // the two shell caveats are opposites and must not be swapped
+      assert.match(txt, /Caveat from GTFOBins/, "system() shell caveat missing for gdb/php");
+      assert.match(txt, /load-bearing/, "-p warning missing for directly-execing binaries");
+
+      // the three not-a-shell buckets each say something different
+      assert.match(txt, /GTFOBins knows this binary/, "gimp should report as known-but-no-SUID-route");
+      assert.match(txt, /No GTFOBins entry at all/, "/opt/fileS should report as unknown");
+      assert.match(txt, /Standard on any box/, "su should be ranked as a standard SUID bit");
+
+      assert.ok(!/\{[A-Z]+\}/.test(cmds.join("\n")), "unsubstituted {TOKEN} in a SUID command");
     } finally {
       window.close();
     }

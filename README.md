@@ -26,7 +26,10 @@ across the top, so you can move between them without going back to the launcher.
   passwords, AV evasion) plus
   tools that open full-screen: a scan planner (paste or drop nmap output → per-service
   commands + box-type routing), a reverse-shell generator, a hash identifier, an exploit
-  suggester (with optional live NVD lookup), a proof checklist, a per-box credentials, notes
+  suggester (with optional live NVD lookup), a SUID cross-reference (paste the output of
+  `find / -perm -4000` and it maps every binary onto GTFOBins, ranks them root-shell first,
+  rewrites each command to the path on the box, and tells you which ones are just the
+  standard bits), a proof checklist, a per-box credentials, notes
   and attempt tracker, a block-based findings editor (drag-to-reorder, severity and status,
   feeds the report), a timer, per-step evidence capture including screenshots, and a write-up
   generator (markdown, self-contained HTML, and print/PDF) in either lab or exam shape. Set your IP/LHOST once and
@@ -157,7 +160,7 @@ The shell scripts obviously only run locally.
 
 ## Versions
 
-`v1.6.3`. The version shows in the nav bar of every page, so you can tell whether an
+`v1.7.0`. The version shows in the nav bar of every page, so you can tell whether an
 offline copy is current. Tagging `v*` builds an offline zip and attaches it to the release;
 the repo does not carry a bundle that can go stale.
 
