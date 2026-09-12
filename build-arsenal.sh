@@ -144,6 +144,27 @@ for e in entries:
     e["ports"]=field(e["tags"],"port"); e["protocols"]=field(e["tags"],"protocol")
     e["platforms"]=field(e["tags"],"plateform")+field(e["tags"],"platform")
 
+# Upstream still carries a few invocations that no longer run on a current Kali.
+# Rewrite those at build time rather than editing arsenal.html, which is generated.
+# Keep this list SHORT and only for commands that are genuinely dead -- not for
+# ones that merely depend on the target. `nc -e` stays (some builds still have it)
+# and a bare `python -c` stays (an old box may have no python3), because
+# "wrong here" and "wrong everywhere" are different problems.
+MODERNISE = [
+    # Python 2 is EOL and SimpleHTTPServer does not exist in Python 3 at all.
+    (re.compile(r"\bpython\s+-m\s+SimpleHTTPServer\b"), "python3 -m http.server"),
+    # crackmapexec is unmaintained and gone from Kali; netexec ships nxc as a
+    # drop-in with the same CLI, and the playbook already uses nxc throughout.
+    (re.compile(r"(?m)^(\s*)cme\b"), r"\1nxc"),
+    (re.compile(r"\bcrackmapexec\b"), "nxc"),
+]
+for e in entries:
+    original = e["cmd"]
+    for pat, sub in MODERNISE:
+        e["cmd"] = pat.sub(sub, e["cmd"])
+    # keep the old spelling searchable so "crackmapexec" still finds the entry
+    e["legacy"] = original if e["cmd"] != original else ""
+
 entries.sort(key=lambda e:(sec_key(e["section"]),e["tool"].lower(),e["desc"].lower()))
 esc=lambda s: html.escape(s or "",quote=True)
 from collections import Counter
@@ -156,7 +177,7 @@ for e in entries:
         cur=e["section"]; n=sc[cur]
         rows.append(f'<h2 class="group" data-section="{esc(cur)}"><span class="group-name">{esc(cur)}</span><span class="group-count">{n}</span></h2>')
     label,colour,_=CAT_META.get(e["cat"],CAT_META["MISC"])
-    blob=" ".join([e["desc"],e["cmd"],e["tool"],e["section"],e["cat"]," ".join(e["cats"][:1]),
+    blob=" ".join([e["desc"],e["cmd"],e.get("legacy",""),e["tool"],e["section"],e["cat"]," ".join(e["cats"][:1]),
                    " ".join(e["protocols"]),
                    " ".join("port:"+p+" "+p for p in e["ports"]),
                    " ".join(e["platforms"])]).lower()
@@ -331,7 +352,7 @@ main{max-width:1180px;margin:0 auto;padding:8px 20px 120px}
   <a href="arsenal.html" aria-current="page">arsenal</a>
   <a href="cheatsheet.html">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.6.1</span>
+  <span class="ver">v1.6.2</span>
 </nav>
 
 <div class="bar">
