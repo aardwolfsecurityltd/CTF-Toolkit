@@ -160,6 +160,7 @@ ok "PR #$PR merged"
 
 git checkout --quiet main
 git pull --quiet --ff-only origin main
+git fetch --quiet origin --prune          # the merged branch is gone; drop the stale ref
 ok "main updated"
 
 merged_version=$(sed -n 's/^const APP_VERSION="\([0-9][0-9.]*\)";.*/\1/p' playbook.html | head -1)
@@ -167,7 +168,14 @@ merged_version=$(sed -n 's/^const APP_VERSION="\([0-9][0-9.]*\)";.*/\1/p' playbo
   die "merged main says $merged_version but the PR said $version — tag by hand after checking what happened"
 ok "merged main still says $version"
 
-git tag -a "$tag" -m "$tag — $pr_title
+# A PR titled "v1.6.1 — ..." would otherwise give "v1.6.1 — v1.6.1 — ...".
+subject="$pr_title"
+case "$subject" in
+  "$tag"|"$tag "*|"$tag-"*|"$tag:"*|"$tag —"*) ;;
+  *) subject="$tag — $pr_title" ;;
+esac
+
+git tag -a "$tag" -m "$subject
 
 Released from #$PR.
 $pr_url"
