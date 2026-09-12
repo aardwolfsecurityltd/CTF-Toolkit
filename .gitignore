@@ -19,3 +19,6 @@ enum_*/
 # test harness (jsdom is installed on demand, never committed)
 node_modules/
 package-lock.json
+
+# Claude Code session state and worktrees
+.claude/
