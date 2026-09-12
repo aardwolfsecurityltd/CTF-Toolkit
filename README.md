@@ -160,7 +160,7 @@ The shell scripts obviously only run locally.
 
 ## Versions
 
-`v1.7.0`. The version shows in the nav bar of every page, so you can tell whether an
+`v1.7.1`. The version shows in the nav bar of every page, so you can tell whether an
 offline copy is current. Tagging `v*` builds an offline zip and attaches it to the release;
 the repo does not carry a bundle that can go stale.
 

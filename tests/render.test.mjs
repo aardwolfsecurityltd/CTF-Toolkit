@@ -278,13 +278,17 @@ if (JSDOM) {
       assert.ok(pill, "SUID xref tool pill missing");
       pill.dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
       const ta = d.getElementById("suidInput");
+      // Kenobi's real find output in miniature, plus the shapes that broke on real data.
       ta.value = [
-        "/usr/bin/find",            // execs directly -> keeps -p
-        "/usr/bin/gdb",             // reaches the shell via system() -> caveat
-        "/usr/bin/php7.4",          // only matches after the version suffix is walked off
-        "/usr/bin/gimp-2.10",       // in GTFOBins, but with no SUID context
-        "/opt/fileS",               // custom binary, no entry at all
-        "/usr/bin/su",              // standard, must not crowd the real findings
+        "/usr/bin/find",              // execs a shell directly -> keeps -p
+        "/usr/bin/php7.4",            // matches only after the version suffix is walked off
+        "/usr/bin/wget",              // multi-line script; the binary is on the LAST line
+        "/usr/bin/dosbox",            // file-write only, not a shell
+        "/usr/bin/gimp-2.10",         // in GTFOBins, but with no SUID context
+        "/usr/bin/menu",              // Kenobi's answer: no entry at all
+        "/usr/lib/x86_64-linux-gnu/lxc/lxc-user-nic", // distro helper, not a custom binary
+        "/usr/bin/su",
+        "/snap/core20/2599/usr/bin/su",  // snap copy of the same thing
         "-rwsr-xr-x 1 root root 1 Jan 1 2024 /usr/bin/env", // ls -la form
       ].join("\n");
       ta.dispatchEvent(new window.Event("input", {bubbles: true}));
@@ -293,21 +297,35 @@ if (JSDOM) {
       const out = d.getElementById("suidOut");
       const txt = out.textContent;
       const cmds = [...out.querySelectorAll(".cmdtext")].map(c => c.textContent);
+      const titles = [...out.querySelectorAll(".ptitle")].map(e => e.textContent);
+      const cmd = re => cmds.find(c => re.test(c));
 
-      // the command must name the binary where it actually lives, not where GTFOBins found it
-      assert.ok(cmds.some(c => /^\/usr\/bin\/find \. -exec \/bin\/sh -p /.test(c)), "find not rewritten to its real path with -p");
-      assert.ok(cmds.some(c => /^\/usr\/bin\/env \/bin\/sh -p/.test(c)), "env not parsed out of ls -la output");
-      assert.ok(cmds.some(c => /^\/usr\/bin\/php7\.4 /.test(c)), "php7.4 did not match GTFOBins' php entry");
-      assert.ok(cmds.every(c => /^\//.test(c)), "a command still starts with the bare GTFOBins name");
+      // the command must name the binary where it actually lives
+      assert.match(cmd(/find/) || "", /^\/usr\/bin\/find \. -exec \/bin\/sh -p /, "find not rewritten to its real path with -p");
+      assert.ok(cmd(/php7\.4/), "php7.4 did not match GTFOBins' php entry");
+      assert.ok(cmd(/env \/bin\/sh -p/), "env not parsed out of ls -la output");
 
-      // the two shell caveats are opposites and must not be swapped
-      assert.match(txt, /Caveat from GTFOBins/, "system() shell caveat missing for gdb/php");
-      assert.match(txt, /load-bearing/, "-p warning missing for directly-execing binaries");
+      // 19% of GTFOBins SUID entries are multi-line scripts where the binary is
+      // not the first token. Truncating or blindly prepending produces garbage.
+      const wget = cmd(/use-askpass/) || "";
+      assert.equal(wget.split("\n").length, 3, "wget's multi-line script was flattened");
+      assert.match(wget, /\n\/usr\/bin\/wget --use-askpass=/, "path not substituted on the line that invokes wget");
+      assert.match(wget, /^echo -e /, "the script's first line was overwritten with the path");
 
-      // the three not-a-shell buckets each say something different
-      assert.match(txt, /GTFOBins knows this binary/, "gimp should report as known-but-no-SUID-route");
-      assert.match(txt, /No GTFOBins entry at all/, "/opt/fileS should report as unknown");
-      assert.match(txt, /Standard on any box/, "su should be ranked as a standard SUID bit");
+      // one note per group, not repeated per row
+      assert.equal((txt.match(/load-bearing/g) || []).length, 1, "the -p note is repeated per row");
+
+      // each not-a-shell bucket is its own group and says something different
+      assert.ok(titles.some(t => /^Root shell$/.test(t)), "direct-exec shell group missing");
+      assert.ok(titles.some(t => /Useful, but not a shell/.test(t)), "dosbox should land in the useful group");
+      assert.ok(titles.some(t => /Not in GTFOBins at all/.test(t)), "menu should report as unknown");
+      assert.ok(titles.some(t => /In GTFOBins, but no SUID technique/.test(t)), "gimp should report as known-but-no-route");
+      assert.ok(titles.some(t => /Standard on any box/.test(t)), "su should be ranked as a standard SUID bit");
+
+      // distro helpers are not "custom binaries", and snap copies are one finding
+      assert.ok(!/lxc-user-nic/.test(txt.split("Standard on any box")[0]), "lxc-user-nic flagged as a custom binary");
+      assert.match(txt, /\+1 more copy/, "the /snap copy of su was not folded into one row");
+      assert.match(d.getElementById("suidHint").textContent, /10 pasted, 9 distinct/, "summary should count distinct binaries");
 
       assert.ok(!/\{[A-Z]+\}/.test(cmds.join("\n")), "unsubstituted {TOKEN} in a SUID command");
     } finally {
