@@ -333,6 +333,36 @@ if (JSDOM) {
     }
   });
 
+  test("write-up offers report templates with their own stylesheet", () => {
+    const {window, d, errors} = boot("playbook.html");
+    assert.deepEqual(errors, [], "script errors on load");
+    // capture the print-view document
+    let printed = "";
+    window.open = () => ({ document: { write: h => { printed += h; }, close(){} }, focus(){}, print(){} });
+    const set = (k, v) => { const el = d.getElementById("v_" + k); el.value = v; el.dispatchEvent(new window.Event("input", {bubbles: true})); };
+    set("BOX", "b"); set("IP", "10.0.0.9");
+    const openWU = () => [...d.querySelectorAll("#tools .track-pill")].find(x => x.dataset.id === "__writeup").dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
+    openWU();
+
+    const tpls = [...d.querySelectorAll(".wu-mode .genbtn")].map(b => b.textContent);
+    assert.ok(tpls.some(t => /Lab/.test(t)) && tpls.some(t => /OSCP/.test(t)), "expected Lab and OSCP templates: " + tpls.join(","));
+    assert.match(d.querySelector(".wu-preview h1").textContent, /Penetration Test Report/, "lab title wrong");
+    assert.match(d.querySelector(".phase-field label").textContent, /Tester name/, "lab author label wrong");
+
+    // select OSCP
+    [...d.querySelectorAll(".wu-mode .genbtn")].find(b => /OSCP/.test(b.textContent)).dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
+    assert.match(d.querySelector(".wu-preview h1").textContent, /OSCP Exam Report/, "OSCP title wrong");
+    assert.match(d.querySelector(".phase-field label").textContent, /Candidate name/, "OSCP author label wrong");
+    assert.ok([...d.querySelectorAll(".wu-preview h2")].some(h => /Proof values/.test(h.textContent)), "OSCP proof-values section missing");
+
+    // the print view must carry the OSCP stylesheet, not the lab one
+    [...d.querySelectorAll(".wu-actions .genbtn")].find(b => /print/.test(b.textContent)).dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
+    assert.match(printed, /OSCP Exam Report/, "print view missing OSCP title");
+    assert.match(printed, /#0b5394/, "print view did not use the OSCP stylesheet");
+    assert.ok(!/Georgia/.test(printed), "print view still using the lab serif stylesheet");
+    window.close();
+  });
+
   test("cheat sheet fills target variables and shares them", () => {
     const {window, d, errors} = boot("cheatsheet.html");
     assert.deepEqual(errors, [], "script errors on load");
