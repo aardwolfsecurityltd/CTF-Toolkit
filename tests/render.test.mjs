@@ -358,6 +358,45 @@ if (JSDOM) {
     window.close();
   });
 
+  test("cheat sheet collapses to the open ports you focus on", () => {
+    const {window, d, errors} = boot("cheatsheet.html");
+    assert.deepEqual(errors, [], "script errors on load");
+    assert.ok(d.querySelector(".roles"), "role strip missing");
+    assert.ok(d.querySelector(".focus #ports"), "open-ports focus control missing");
+
+    const visible = () => [...d.querySelectorAll("#doc h2")]
+      .filter(h => !h.classList.contains("filtered"))
+      .map(h => h.textContent);
+    const before = visible().length;
+    assert.ok(before > 15, "expected the full section set before filtering");
+
+    const p = d.getElementById("ports");
+    p.value = "22,445";
+    p.dispatchEvent(new window.Event("input", {bubbles: true}));
+    const after = visible();
+
+    assert.ok(after.some(x => /SSH/.test(x)), "SSH (22) should stay");
+    assert.ok(after.some(x => /SMB/.test(x)), "SMB (445) should stay");
+    assert.ok(!after.some(x => /FTP/.test(x)), "FTP (21) should be filtered out");
+    assert.ok(!after.some(x => /^Web/.test(x)), "Web should be filtered out");
+    // universal (non-port) sections must always remain
+    assert.ok(after.some(x => /Reverse shells/.test(x)), "universal section dropped");
+    assert.ok(after.some(x => /Privilege escalation/.test(x)), "universal section dropped");
+    // TOC follows the filter
+    assert.ok(d.querySelectorAll(".toc a.filtered").length > 0, "TOC did not follow the filter");
+
+    // "use my scan" reads the shared scan
+    window.localStorage.setItem("toolkit:vars", JSON.stringify({BOX: "b"}));
+    window.localStorage.setItem("scan2:b", JSON.stringify([{port: "80"}, {port: "161"}]));
+    d.getElementById("useScan").dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
+    const s2 = visible();
+    assert.ok(s2.some(x => /^Web/.test(x)) && s2.some(x => /SNMP/.test(x)), "use-my-scan did not focus on 80/161");
+
+    d.getElementById("clearFocus").dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
+    assert.equal(visible().length, before, "show-all did not restore every section");
+    window.close();
+  });
+
   test("launcher renders and every card points somewhere real", () => {
     const {d, window} = boot("index.html");
     const cards = [...d.querySelectorAll("a.card")];

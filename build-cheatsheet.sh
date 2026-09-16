@@ -42,6 +42,17 @@ def slug(t):
     s = re.sub(r"[^a-z0-9]+", "-", t.lower()).strip("-")
     return s or "section"
 
+def section_ports(text):
+    # Ports a section applies to, so the page can collapse to a box's open ports.
+    # Numbers in the heading, plus a few aliases for headings that name a
+    # service without a port. Sections with none are universal (always shown).
+    ports = set(int(n) for n in re.findall(r"\d+", text))
+    t = text.lower()
+    if "web" in t or "http" in t: ports |= {80, 443, 8000, 8080, 8443, 8888, 5000, 3000}
+    if "database" in t:           ports |= {3306, 1433, 5432, 6379, 27017, 1521, 9200, 11211}
+    if "rdp" in t or "winrm" in t: ports |= {3389, 5985, 5986}
+    return ",".join(str(p) for p in sorted(ports))
+
 lines = src.splitlines()
 out, toc = [], []
 i, n = 0, len(lines)
@@ -92,7 +103,12 @@ while i < n:
             sid = sid + "-" + str(seen[sid])
         else:
             seen[sid] = 1
-        out.append("<h%d id=\"%s\">%s</h%d>" % (lvl, sid, inline(text), lvl))
+        attrs = ""
+        if lvl == 2:
+            ports = section_ports(text)
+            if ports:
+                attrs = ' data-ports="%s"' % ports
+        out.append("<h%d id=\"%s\"%s>%s</h%d>" % (lvl, sid, attrs, inline(text), lvl))
         if lvl == 2:
             toc.append((sid, text))
         i += 1
@@ -172,6 +188,18 @@ a{color:var(--accent)}
 .vfield:focus-within{border-color:var(--accent)}
 .ph{border-radius:3px;padding:0 2px}
 .ph.filled{color:var(--accent);background:rgba(45,212,191,.15)}
+.roles{padding:7px 20px;background:var(--bg);border-bottom:1px solid var(--line);
+  font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.roles b{color:var(--ink)}
+.roles a{color:var(--accent);text-decoration:none}
+.roles a:hover{text-decoration:underline}
+.focus{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 20px;
+  background:var(--surface);border-bottom:1px solid var(--line)}
+.focus .fbtn{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--elev);
+  border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer}
+.focus .fbtn:hover{color:var(--ink);border-color:var(--faint)}
+.focus .hint{font-family:var(--mono);font-size:10.5px;color:var(--faint);flex:none}
+.filtered{display:none!important}
 
 .layout{max-width:1180px;margin:0 auto;padding:22px 20px 110px;display:grid;
   grid-template-columns:210px minmax(0,1fr);gap:34px;align-items:start}
@@ -213,7 +241,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
 @media print{
-  .topnav,.vars,.toc,.block .copy{display:none!important}
+  .topnav,.vars,.focus,.roles,.toc,.block .copy{display:none!important}
   body{background:#fff;color:#111;font-size:10.5pt}
   .layout{display:block;max-width:none;padding:0}
   a{color:#111;text-decoration:none}
@@ -241,6 +269,12 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <button type="button" id="printBtn">print</button>
 </nav>
 
+<div class="roles">
+  <b>Cheat sheet</b> — the essentials, by service.
+  <a href="playbook.html">Playbook</a> to work a box &middot;
+  <a href="arsenal.html">Arsenal</a> to search every command.
+</div>
+
 <div class="vars" aria-label="Target variables">
   <span class="vlabel">fill</span>
   <div class="vfield"><label for="v_IP">IP</label><input id="v_IP" placeholder="10.10.10.10" autocomplete="off"></div>
@@ -250,6 +284,14 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <div class="vfield"><label for="v_LHOST">LHOST</label><input id="v_LHOST" placeholder="tun0 IP" autocomplete="off"></div>
   <div class="vfield"><label for="v_LPORT">LPORT</label><input id="v_LPORT" placeholder="443" autocomplete="off"></div>
   <span class="hint">set once — shared with the playbook &amp; arsenal, fills the commands below</span>
+</div>
+
+<div class="focus" aria-label="Focus on your open ports">
+  <span class="vlabel">focus</span>
+  <div class="vfield" style="flex:1 1 220px"><label for="ports">open ports</label><input id="ports" placeholder="22,80,445 — collapse to just these services" autocomplete="off"></div>
+  <button type="button" class="fbtn" id="useScan">use my scan</button>
+  <button type="button" class="fbtn" id="clearFocus">show all</button>
+  <span class="hint" id="focusHint"></span>
 </div>
 
 <div class="layout">
@@ -326,6 +368,42 @@ __BODY__
     },{rootMargin:"-60px 0px -75% 0px"});
     heads.forEach(function(h){io.observe(h);});
   }
+
+  // ---- focus: collapse to the services on this box's open ports ----
+  var tocById={}; links.forEach(function(a){tocById[a.getAttribute('href').slice(1)]=a;});
+  var portsInput=document.getElementById('ports');
+  var focusHint=document.getElementById('focusHint');
+  var docEl=document.getElementById('doc');
+  function parsePorts(str){var set=new Set();(String(str).match(/\d+/g)||[]).forEach(function(n){set.add(+n);});return set;}
+  function applyFocus(){
+    var set=parsePorts(portsInput.value), active=set.size>0, shown=0,total=0, hideCur=false;
+    [].forEach.call(docEl.children,function(el){
+      if(el.tagName==='H2'){
+        var dp=el.getAttribute('data-ports');
+        if(!active||!dp){hideCur=false;}                 // universal section, or no filter set
+        else{total++;var sp=dp.split(',').map(Number);hideCur=!sp.some(function(p){return set.has(p);});if(!hideCur)shown++;}
+        el.classList.toggle('filtered',hideCur);
+        var link=tocById[el.id]; if(link) link.classList.toggle('filtered',hideCur);
+      } else {
+        el.classList.toggle('filtered',hideCur);
+      }
+    });
+    focusHint.textContent = active ? (shown+' of '+total+' services — plus the universal sections') : '';
+    try{ if(active) localStorage.setItem('cheat:ports',portsInput.value); else localStorage.removeItem('cheat:ports'); }catch(_){}
+  }
+  portsInput.addEventListener('input',applyFocus);
+  document.getElementById('clearFocus').addEventListener('click',function(){portsInput.value='';applyFocus();portsInput.focus();});
+  document.getElementById('useScan').addEventListener('click',function(){
+    try{
+      var v=JSON.parse(localStorage.getItem('toolkit:vars')||'{}')||{};
+      var box=v.BOX||'_default';
+      var scan=JSON.parse(localStorage.getItem('scan2:'+box)||'[]')||[];
+      var ports=scan.map(function(p){return p.port;}).filter(Boolean);
+      if(!ports.length){focusHint.textContent='no saved scan — paste an nmap into the playbook\'s planner first';return;}
+      portsInput.value=ports.join(','); applyFocus();
+    }catch(_){ focusHint.textContent='could not read your scan'; }
+  });
+  try{var saved=localStorage.getItem('cheat:ports'); if(saved){portsInput.value=saved; applyFocus();}}catch(_){}
 })();
 </script>
 </body>
