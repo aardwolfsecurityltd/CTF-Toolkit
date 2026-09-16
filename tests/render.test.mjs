@@ -333,6 +333,31 @@ if (JSDOM) {
     }
   });
 
+  test("cheat sheet fills target variables and shares them", () => {
+    const {window, d, errors} = boot("cheatsheet.html");
+    assert.deepEqual(errors, [], "script errors on load");
+    assert.equal(d.querySelectorAll(".vars .vfield input").length, 6, "variable inputs missing");
+
+    const set = (k, v) => { const el = d.getElementById("v_" + k); el.value = v; el.dispatchEvent(new window.Event("input", {bubbles: true})); };
+    set("IP", "10.10.11.42");
+    set("LHOST", "10.8.0.5");   // leave USER/PASS/DOMAIN/LPORT empty on purpose
+
+    const filled = [...d.querySelectorAll("#doc code .ph.filled")].map(s => s.textContent);
+    assert.ok(filled.includes("10.10.11.42"), "IP did not fill into any command");
+    assert.ok(filled.includes("10.8.0.5"), "LHOST did not fill");
+
+    const body = d.getElementById("doc").textContent;
+    assert.ok(/\$\(ip -4/.test(body), "$(...) command substitution was clobbered");
+    assert.ok(body.includes("$ports"), "$ports was clobbered");
+    assert.ok(body.includes("<user>"), "unset placeholder <user> should stay literal");
+    assert.ok(!/\$LHOST/.test(body), "set $LHOST should have been replaced");
+
+    // shared with the playbook & arsenal
+    const shared = JSON.parse(window.localStorage.getItem("toolkit:vars"));
+    assert.equal(shared.IP, "10.10.11.42");
+    window.close();
+  });
+
   test("launcher renders and every card points somewhere real", () => {
     const {d, window} = boot("index.html");
     const cards = [...d.querySelectorAll("a.card")];
