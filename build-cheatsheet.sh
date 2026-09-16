@@ -159,6 +159,20 @@ a{color:var(--accent)}
   border:1px solid var(--line);border-radius:5px;padding:3px 9px;cursor:pointer}
 .topnav button:hover{color:var(--ink);border-color:var(--faint)}
 
+/* target variables — shared with the playbook and arsenal */
+.vars{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 20px;
+  background:var(--surface);border-bottom:1px solid var(--line)}
+.vars .vlabel{font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:.4px;flex:none}
+.vars .hint{font-family:var(--mono);font-size:10.5px;color:var(--faint);flex:none;margin-left:auto}
+.vfield{display:flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--line);
+  border-radius:6px;padding:3px 7px;flex:1 1 110px;min-width:0}
+.vfield label{font-family:var(--mono);font-size:10.5px;color:var(--faint);flex:none}
+.vfield input{background:transparent;border:0;outline:0;color:var(--ink);font-family:var(--mono);
+  font-size:12.5px;width:100%;min-width:0}
+.vfield:focus-within{border-color:var(--accent)}
+.ph{border-radius:3px;padding:0 2px}
+.ph.filled{color:var(--accent);background:rgba(45,212,191,.15)}
+
 .layout{max-width:1180px;margin:0 auto;padding:22px 20px 110px;display:grid;
   grid-template-columns:210px minmax(0,1fr);gap:34px;align-items:start}
 .toc{position:sticky;top:64px;font-family:var(--mono);font-size:12px;display:flex;
@@ -199,7 +213,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
 @media print{
-  .topnav,.toc,.block .copy{display:none!important}
+  .topnav,.vars,.toc,.block .copy{display:none!important}
   body{background:#fff;color:#111;font-size:10.5pt}
   .layout{display:block;max-width:none;padding:0}
   a{color:#111;text-decoration:none}
@@ -223,9 +237,20 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.7.3</span>
+  <span class="ver">v1.8.0</span>
   <button type="button" id="printBtn">print</button>
 </nav>
+
+<div class="vars" aria-label="Target variables">
+  <span class="vlabel">fill</span>
+  <div class="vfield"><label for="v_IP">IP</label><input id="v_IP" placeholder="10.10.10.10" autocomplete="off"></div>
+  <div class="vfield"><label for="v_DOMAIN">DOMAIN</label><input id="v_DOMAIN" placeholder="box.local" autocomplete="off"></div>
+  <div class="vfield"><label for="v_USER">USER</label><input id="v_USER" placeholder="user" autocomplete="off"></div>
+  <div class="vfield"><label for="v_PASS">PASS</label><input id="v_PASS" placeholder="pass" autocomplete="off"></div>
+  <div class="vfield"><label for="v_LHOST">LHOST</label><input id="v_LHOST" placeholder="tun0 IP" autocomplete="off"></div>
+  <div class="vfield"><label for="v_LPORT">LPORT</label><input id="v_LPORT" placeholder="443" autocomplete="off"></div>
+  <span class="hint">set once — shared with the playbook &amp; arsenal, fills the commands below</span>
+</div>
 
 <div class="layout">
   <nav class="toc" id="toc" aria-label="Sections">__TOC__</nav>
@@ -237,6 +262,45 @@ __BODY__
 <script>
 (function(){
   document.getElementById("printBtn").addEventListener("click",function(){window.print();});
+
+  // ---- fill target variables (shared with the playbook & arsenal via toolkit:vars) ----
+  var VAR_KEYS=['IP','DOMAIN','USER','PASS','LHOST','LPORT'];
+  var ANGLE={ip:'IP',target:'IP',rhost:'IP',host:'DOMAIN',domain:'DOMAIN',domain_name:'DOMAIN',
+    user:'USER',username:'USER',pass:'PASS',password:'PASS',lhost:'LHOST',lport:'LPORT'};
+  var VARS={};
+  function loadVars(){
+    try{VARS=JSON.parse(localStorage.getItem('toolkit:vars')||'{}')||{};}catch(_){VARS={};}
+    VAR_KEYS.forEach(function(k){var el=document.getElementById('v_'+k);if(el)el.value=VARS[k]||'';});
+  }
+  function saveVars(){
+    try{var cur=JSON.parse(localStorage.getItem('toolkit:vars')||'{}')||{};
+      localStorage.setItem('toolkit:vars',JSON.stringify(Object.assign(cur,VARS)));}catch(_){}
+  }
+  var codes=[].slice.call(document.querySelectorAll('#doc pre code'));
+  var raws=codes.map(function(c){return c.textContent;});
+  // <placeholder> in either case, or the shell vars $IP/$LHOST/$LPORT/$DOMAIN (exact, so $ports etc. are safe)
+  var TOK=/<([a-z_][a-z0-9_-]{0,24})>|\$(IP|LHOST|LPORT|DOMAIN)\b/gi;
+  function fillOne(el,raw){
+    var frag=document.createDocumentFragment(),last=0,m,any=false;
+    TOK.lastIndex=0;
+    while((m=TOK.exec(raw))!==null){
+      var key=m[1]?ANGLE[m[1].toLowerCase()]:m[2].toUpperCase();
+      var val=key?(VARS[key]||''):'';
+      if(!val)continue;
+      if(m.index>last)frag.appendChild(document.createTextNode(raw.slice(last,m.index)));
+      var sp=document.createElement('span');sp.className='ph filled';sp.textContent=val;
+      frag.appendChild(sp);last=m.index+m[0].length;any=true;
+    }
+    if(!any){el.textContent=raw;return;}
+    if(last<raw.length)frag.appendChild(document.createTextNode(raw.slice(last)));
+    el.textContent='';el.appendChild(frag);
+  }
+  function fillAll(){codes.forEach(function(el,i){fillOne(el,raws[i]);});}
+  VAR_KEYS.forEach(function(k){
+    var el=document.getElementById('v_'+k);if(!el)return;
+    el.addEventListener('input',function(){VARS[k]=el.value.trim();saveVars();fillAll();});
+  });
+  loadVars();fillAll();
 
   document.getElementById("doc").addEventListener("click",async function(e){
     var btn=e.target.closest(".copy");
