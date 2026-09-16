@@ -126,7 +126,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.9.0</span>
+  <span class="ver">v1.9.1</span>
   <button type="button" id="printBtn">print</button>
 </nav>
 
@@ -551,6 +551,12 @@ searchsploit -x &lt;id&gt;          # view it</code></pre></div>
     var btn=e.target.closest(".copy");
     if(!btn)return;
     var code=btn.parentElement.querySelector("code").textContent;
+    // Copy the runnable lines only, so full-line # comments don't land in your
+    // prompt. If the block is all comments (a payload written as a comment, e.g.
+    // XXE/NoSQL), copy it verbatim so nothing is lost. (Safe here: the cheat
+    // sheet has no heredocs or #include lines.)
+    var cmds=code.split("\n").filter(function(l){var t=l.replace(/^\s+/,"");return t.length && t.charAt(0)!=="#";});
+    if(cmds.length) code=cmds.join("\n");
     try{await navigator.clipboard.writeText(code);}
     catch(_){var t=document.createElement("textarea");t.value=code;
       document.body.appendChild(t);t.select();document.execCommand("copy");t.remove();}

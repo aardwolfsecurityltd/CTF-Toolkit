@@ -388,6 +388,27 @@ if (JSDOM) {
     window.close();
   });
 
+  test("cheat sheet copy strips comment lines from the command", () => {
+    const {window, d, errors} = boot("cheatsheet.html");
+    assert.deepEqual(errors, [], "script errors on load");
+    let copied = null;
+    Object.defineProperty(window.navigator, "clipboard",
+      {value: {writeText: t => { copied = t; return Promise.resolve(); }}, configurable: true});
+
+    const block = [...d.querySelectorAll("#doc .block")].find(b => {
+      const c = b.querySelector("code").textContent;
+      return /nmap -p80/.test(c) && /^\s*#/m.test(c);   // a block with both commands and # comments
+    });
+    assert.ok(block, "expected a mixed command+comment block");
+    block.querySelector(".copy").dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
+
+    assert.ok(copied, "nothing copied");
+    assert.ok(!copied.split("\n").some(l => l.trim().startsWith("#")),
+      "copied text still contains a full comment line:\n" + copied);
+    assert.match(copied, /nmap -p80/, "copy dropped the actual command");
+    window.close();
+  });
+
   test("cheat sheet collapses to the open ports you focus on", () => {
     const {window, d, errors} = boot("cheatsheet.html");
     assert.deepEqual(errors, [], "script errors on load");
