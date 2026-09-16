@@ -298,6 +298,7 @@ body.overlay-open{overflow:hidden}
 /* ---------- storage warning banner ---------- */
 .banner{background:#3b1d22;border-bottom:1px solid #f43f5e;color:#ffd9df;
   padding:9px 20px;font-size:12.5px;display:flex;gap:12px;align-items:center}
+.banner[hidden]{display:none}
 .banner b{color:#fff}
 .banner button{margin-left:auto;background:transparent;border:1px solid #f43f5e;color:#ffd9df;
   border-radius:6px;padding:3px 9px;font-family:var(--mono);font-size:11px;cursor:pointer}
@@ -1069,7 +1070,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.7.2";
+const APP_VERSION="1.7.3";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
