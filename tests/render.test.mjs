@@ -418,7 +418,6 @@ if (JSDOM) {
   test("cheat sheet collapses to the open ports you focus on", () => {
     const {window, d, errors} = boot("cheatsheet.html");
     assert.deepEqual(errors, [], "script errors on load");
-    assert.ok(d.querySelector(".roles"), "role strip missing");
     assert.ok(d.querySelector(".focus #ports"), "open-ports focus control missing");
 
     const visible = () => [...d.querySelectorAll("#doc h2")]

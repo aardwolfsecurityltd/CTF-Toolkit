@@ -256,11 +256,6 @@ a{color:var(--accent)}
 .topnav a[aria-current="page"]{color:var(--ink);background:var(--elev)}
 .topnav .sep{flex:1}
 .topnav .ver{color:var(--faint);font-size:11px;padding-right:8px}
-.roles{padding:7px 20px;background:var(--bg);border-bottom:1px solid var(--line);
-  font-family:var(--mono);font-size:11.5px;color:var(--muted)}
-.roles b{color:var(--ink)}
-.roles a{color:var(--accent);text-decoration:none}
-.roles a:hover{text-decoration:underline}
 
 /* ---- target variables, shared with the playbook ---- */
 .vars{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;align-items:center}
@@ -374,13 +369,8 @@ main{max-width:1180px;margin:0 auto;padding:8px 20px 120px}
   <a href="arsenal.html" aria-current="page">arsenal</a>
   <a href="cheatsheet.html">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.9.2</span>
+  <span class="ver">v1.9.3</span>
 </nav>
-
-<div class="roles">
-  <b>Arsenal</b> — every command, searchable. <a href="playbook.html">Playbook</a> to work a box &middot;
-  <a href="cheatsheet.html">Cheat sheet</a> for the essentials.
-</div>
 
 <div class="bar">
   <div class="bar-inner">

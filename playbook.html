@@ -36,11 +36,6 @@ code,kbd{font-family:var(--mono)}
 .topnav a[aria-current="page"]{color:var(--ink);background:var(--elev)}
 .topnav .sep{flex:1}
 .topnav .ver{color:var(--faint);font-size:11px;padding-right:4px}
-.roles{padding:6px 20px;background:var(--surface);border-bottom:1px solid var(--line);
-  font-family:var(--mono);font-size:11.5px;color:var(--muted)}
-.roles b{color:var(--ink)}
-.roles a{color:var(--accent);text-decoration:none}
-.roles a:hover{text-decoration:underline}
 
 /* ---------- top variable bar ---------- */
 .bar{position:sticky;top:0;z-index:40;background:var(--bg);
@@ -421,7 +416,7 @@ body.overlay-open{overflow:hidden}
 
 /* ---------- print: the playbook itself, not just the report ---------- */
 @media print{
-  .bar,.topnav,.roles,.stuck,.toolbar,.drawer,.banner,.toast,.pal,.arsenal-link,.ev,.copy,.chev{display:none!important}
+  .bar,.topnav,.stuck,.toolbar,.drawer,.banner,.toast,.pal,.arsenal-link,.ev,.copy,.chev{display:none!important}
   body{background:#fff;color:#111}
   main{padding:0;max-width:none}
   .phase{border:1px solid #bbb;background:#fff;break-inside:avoid}
@@ -448,11 +443,6 @@ body.overlay-open{overflow:hidden}
   <span class="ver" id="verStamp"></span>
   <a href="#" id="navKeys" title="Keyboard shortcuts">?</a>
 </nav>
-
-<div class="roles">
-  <b>Playbook</b> — work the box, guided and per-box. <a href="arsenal.html">Arsenal</a> to search every command &middot;
-  <a href="cheatsheet.html">Cheat sheet</a> for the essentials.
-</div>
 
 <div class="banner" id="storeWarn" hidden>
   <span><b>This browser is not saving your work.</b>
@@ -1080,7 +1070,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.9.2";
+const APP_VERSION="1.9.3";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses

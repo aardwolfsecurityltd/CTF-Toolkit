@@ -49,11 +49,6 @@ a{color:var(--accent)}
 .vfield:focus-within{border-color:var(--accent)}
 .ph{border-radius:3px;padding:0 2px}
 .ph.filled{color:var(--accent);background:rgba(45,212,191,.15)}
-.roles{padding:7px 20px;background:var(--bg);border-bottom:1px solid var(--line);
-  font-family:var(--mono);font-size:11.5px;color:var(--muted)}
-.roles b{color:var(--ink)}
-.roles a{color:var(--accent);text-decoration:none}
-.roles a:hover{text-decoration:underline}
 .focus{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 20px;
   background:var(--surface);border-bottom:1px solid var(--line)}
 .focus .fbtn{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--elev);
@@ -102,7 +97,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
 @media print{
-  .topnav,.vars,.focus,.roles,.toc,.block .copy{display:none!important}
+  .topnav,.vars,.focus,.toc,.block .copy{display:none!important}
   body{background:#fff;color:#111;font-size:10.5pt}
   .layout{display:block;max-width:none;padding:0}
   a{color:#111;text-decoration:none}
@@ -126,15 +121,9 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.9.2</span>
+  <span class="ver">v1.9.3</span>
   <button type="button" id="printBtn">print</button>
 </nav>
-
-<div class="roles">
-  <b>Cheat sheet</b> — the essentials, by service.
-  <a href="playbook.html">Playbook</a> to work a box &middot;
-  <a href="arsenal.html">Arsenal</a> to search every command.
-</div>
 
 <div class="vars" aria-label="Target variables">
   <span class="vlabel">fill</span>
