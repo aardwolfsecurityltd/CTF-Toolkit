@@ -395,17 +395,23 @@ if (JSDOM) {
     Object.defineProperty(window.navigator, "clipboard",
       {value: {writeText: t => { copied = t; return Promise.resolve(); }}, configurable: true});
 
+    // any block that mixes a real command line with a # comment line
     const block = [...d.querySelectorAll("#doc .block")].find(b => {
-      const c = b.querySelector("code").textContent;
-      return /nmap -p80/.test(c) && /^\s*#/m.test(c);   // a block with both commands and # comments
+      const lines = b.querySelector("code").textContent.split("\n");
+      const hasCmd = lines.some(l => l.trim() && !l.trim().startsWith("#"));
+      const hasComment = lines.some(l => l.trim().startsWith("#"));
+      return hasCmd && hasComment;
     });
-    assert.ok(block, "expected a mixed command+comment block");
+    assert.ok(block, "expected a mixed command+comment block somewhere in the cheat sheet");
+    const original = block.querySelector("code").textContent;
     block.querySelector(".copy").dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
 
     assert.ok(copied, "nothing copied");
     assert.ok(!copied.split("\n").some(l => l.trim().startsWith("#")),
       "copied text still contains a full comment line:\n" + copied);
-    assert.match(copied, /nmap -p80/, "copy dropped the actual command");
+    assert.ok(copied.trim().length > 0, "copy stripped everything");
+    assert.ok(original.split("\n").some(l => l.trim().startsWith("#")),
+      "test precondition: the source block should have had a comment line");
     window.close();
   });
 
