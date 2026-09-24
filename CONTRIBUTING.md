@@ -78,6 +78,47 @@ goes through `esc()`. If you add a new field to the template, escape it.
 code, rules, ordered and unordered lists, inline code and bold. That is all the cheat
 sheet uses. If you need more, extend the renderer rather than adding a dependency.
 
+## The playbook's flow model
+
+The playbook is not a static checklist. A single derived object, `ctx`, joins the
+parsed scan, the credential table and the tick state into one answer to "where am I
+on this box", and the front door, the step gates, the track ranking, the tool row and
+the next-move list all read it. Nothing derives its own version of that answer — if
+you need a new signal, add it to `recomputeCtx()` and call `refreshChrome()` wherever
+the underlying state changes.
+
+Four optional keys drive it, and all four are data, not code:
+
+| key | goes on | means |
+|---|---|---|
+| `when:c=>…` | a phase or a step | show it as workable only when this holds of `ctx` |
+| `needs:"…"` | a phase or a step | the blocker, in words, shown on the lock |
+| `gives:"shell"` / `"root"` | a phase | ticking anything inside it moves `ctx.shell` |
+| `when:c=>…` | a `TOOLS` entry | offer the tool up front rather than under "more" |
+
+`needs` is a noun phrase that completes "unlocks once you have …", so write
+`"a domain credential"`, not `"credentials required"`.
+
+Two rules matter more than the rest:
+
+- **Gate, never hide.** A gated step still renders, with its command, greyed and not
+  tickable — seeing what comes next is half of what a playbook is for. A demoted
+  track or tool stays in the DOM and stays one click away under "more". Nothing the
+  toolkit can do should ever become unreachable because a guess about context was
+  wrong.
+- **Say why.** A lock states its blocker, a suggested track carries the reason it was
+  suggested, and a next move names the phase it jumps to. An unexplained ordering is
+  a guess the reader cannot check.
+
+Track ranking lives in `trackScore()` — one `case` per track, returning a score and
+the reason shown on the pill. Anything scoring zero is demoted, not removed. The
+`nextMoves()` list is ordered by hand, filtered by `ctx`, and capped at five; each
+entry jumps to the exact phase that does the work, so a suggestion and its commands
+can never drift apart.
+
+`boxTypeOf()` names the host and then takes its recommended track from the ranking,
+so the banner and the pills beside it cannot disagree.
+
 ## The HTML tools
 
 `index.html`, `playbook.html` and `404.html` are hand-written, dependency-free, and work
@@ -109,6 +150,11 @@ pre-rename redirect stubs still point somewhere.
 
 `tests/render.test.mjs` boots each page in jsdom and asserts it renders: tracks, tools,
 labelled checkboxes, the command palette, the arsenal's filters and variable filling.
+It also covers the flow model end to end — that a DC scan routes the page to Active
+Directory, that the attack phases stay locked until a credential is recorded, that a
+foothold unlocks the privesc phases and their tools, that locked steps do not count
+toward progress, and that nothing demoted becomes unreachable. If you add a `when`
+gate, add the case that proves it both locks and unlocks.
 
 If you fix a parsing bug, add a fixture to `tests/fixtures/` and a case to
 `pure.test.mjs`. The nmap parser in particular is fed untrusted text.
