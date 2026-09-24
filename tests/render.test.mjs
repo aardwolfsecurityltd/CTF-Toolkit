@@ -525,6 +525,9 @@ if (JSDOM) {
       rows[n - 2].value = s; rows[n - 2].dispatchEvent(new window.Event("input", {bubbles: true}));
     };
     h.scan = text => {
+      // the intake lives on the overview's empty state and in the planner tool;
+      // open the tool when the current view is neither
+      if (!d.getElementById("scanInput")) h.go("__planner");
       const ta = d.getElementById("scanInput");
       ta.value = text; ta.dispatchEvent(new window.Event("input", {bubbles: true}));
       h.hit(d.getElementById("genBtn"));
@@ -535,17 +538,60 @@ if (JSDOM) {
   // run a case against a harness and always close the window
   const flow = fn => () => { const h = harness(); try { fn(h); } finally { h.window.close(); } };
 
-  test("the front door is the scan, not a menu of everything", flow(h => {
+  test("the page opens on recon, and says the scan is what drives it", flow(h => {
     const d = h.d;
     assert.deepEqual(h.errors, [], "script errors on load");
-    assert.ok(d.querySelector(".intake #scanInput"), "the scan intake is not on the overview");
-    assert.ok(!d.querySelector(".boxtype"), "the board rendered before there was any scan");
+
+    // recon is the landing view and the highlighted pill
+    assert.equal(d.getElementById("thName").textContent, "Recon", "did not land on the recon track");
+    const active = d.querySelector(".track-pill.active");
+    assert.equal(active && active.dataset.id, "recon", "recon is not the highlighted pill");
+    assert.ok(d.querySelector("#phases .step"), "the recon steps did not render");
+
+    // a checklist does not announce the scan, so the track has to
+    const cta = d.querySelector(".empty-cta");
+    assert.ok(cta, "no call to action pointing at the scan");
+    assert.match(cta.textContent, /scan/i);
+    h.hit(cta.querySelector(".genbtn"));
+    assert.ok(d.getElementById("scanInput"), "the call to action did not open the planner");
 
     // With nothing to go on, only recon has a reason to be on screen...
     assert.deepEqual(h.shown("tracks"), ["__overview", "recon"]);
     // ...but nothing is ever actually removed.
     assert.equal(d.querySelectorAll("#tracks .track-pill").length, 12, "demoted tracks left the DOM");
     assert.match(d.querySelector("#tracks .morepill").textContent, /\+10 more/);
+  }));
+
+  test("using the planner does not stop ticks from rendering", flow(h => {
+    h.set("BOX", "applyprog");
+    h.go("linux");
+    const first = h.d.querySelector("#phases .step:not(.locked) input[type=checkbox]");
+    first.checked = true;
+    first.dispatchEvent(new h.window.Event("change", {bubbles: true}));
+
+    // the planner renders .step rows that carry a command but no tick, and the
+    // overlay keeps its output after closing; applyProg used to throw on the
+    // first of those, freezing the bar and leaving saved ticks unapplied
+    h.scan(LINUX_SCAN);
+    h.go("linux");
+    assert.deepEqual(h.errors, [], "a script error escaped while switching tracks");
+    const back = h.d.querySelector("#phases .step:not(.locked) input[type=checkbox]");
+    assert.equal(back.checked, true, "a saved tick did not render after using the planner");
+    assert.match(h.d.getElementById("plabel").textContent, /^Linux\s+1 ticked \//,
+      "the progress bar is stale: " + h.d.getElementById("plabel").textContent);
+  }));
+
+  test("the overview still holds the intake, and drops the prompt once scanned", flow(h => {
+    h.set("BOX", "intake");
+    h.go("__overview");
+    assert.ok(h.d.querySelector(".intake #scanInput"), "the scan intake is not on the overview");
+    assert.ok(!h.d.querySelector(".boxtype"), "the board rendered before there was any scan");
+
+    h.scan(LINUX_SCAN);
+    h.go("recon");
+    assert.ok(!h.d.querySelector(".empty-cta"), "the paste-a-scan prompt outstayed the scan");
+    h.go("__overview");
+    assert.ok(h.d.querySelector(".boxtype"), "the board did not replace the intake");
   }));
 
   test("a domain controller scan routes the whole page to Active Directory", flow(h => {
