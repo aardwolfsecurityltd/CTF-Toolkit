@@ -21,7 +21,14 @@ across the top, so you can move between them without going back to the launcher.
 
 ## What's inside
 
-- **playbook.html** — the command centre. Switchable tracks (recon, web, Linux, Windows,
+- **playbook.html** — the command centre, and it works forwards rather than as a menu.
+  Paste a scan and the page reorganises around it: it names what the box is, orders the
+  tracks by what the ports imply (and says why on each one), lists the few moves worth
+  making next, and unlocks the steps you can actually run — an Active Directory box shows
+  you how to get a first credential, then opens Kerberoasting, BloodHound and the
+  certificate templates the moment you record one. Locked steps stay visible with their
+  commands, greyed, saying what they are waiting for, so the chain is always readable.
+  Tracks (recon, web, Linux, Windows,
   Active Directory, AD certificate services & delegation, pivoting, container escape, buffer overflow,
   passwords, AV evasion) plus
   tools that open full-screen: a scan planner (paste or drop nmap output → per-service
@@ -91,8 +98,9 @@ means:
 
 - Clearing site data, using a private window, or opening the toolkit from a different
   browser or machine loses the lot.
-- **Use `export box` in the top bar** to write the whole box — ticks, notes, credentials,
-  attempts, scan, timer and screenshots — to a JSON file, and `import` to bring it back.
+- **Use `manage ▾ → export box` in the top bar** to write the whole box — ticks, notes,
+  credentials, attempts, scan, timer and screenshots — to a JSON file, and `import box`
+  to bring it back.
 - If the browser refuses to save (private mode, full quota) a red banner appears at the
   top of the page rather than failing quietly.
 - The box picker lists every box you have worked on, and can create, duplicate and delete
@@ -108,7 +116,7 @@ a finished box and delete it rather than keeping dozens around.
 |---|---|
 | `Ctrl-K` or `/` | command palette — search every track, tool, phase and step |
 | `?` | the shortcut list |
-| `1` – `9` | switch track |
+| `1` – `9` | switch track, in the order the page suggests them |
 | `0` | overview |
 | `e` / `c` | expand / collapse every phase |
 | `t` | start or pause the timer |
@@ -160,7 +168,7 @@ The shell scripts obviously only run locally.
 
 ## Versions
 
-`v1.9.3`. The version shows in the nav bar of every page, so you can tell whether an
+`v1.10.0`. The version shows in the nav bar of every page, so you can tell whether an
 offline copy is current. Tagging `v*` builds an offline zip and attaches it to the release;
 the repo does not carry a bundle that can go stale.
 

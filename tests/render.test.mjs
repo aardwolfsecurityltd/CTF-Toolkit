@@ -462,4 +462,298 @@ if (JSDOM) {
     }
     window.close();
   });
+
+  // ---- flow: the scan drives the page ----
+  // These cover the join between the scan, the credential table and the tick
+  // state (`ctx`) that the front door, the step gates, the track ranking and
+  // the tool row all read. Each of those used to derive its own answer, or no
+  // answer at all.
+  //
+  // Every case closes its window in a finally: a jsdom window left open keeps
+  // the page's setInterval alive, and the test runner then never exits, so one
+  // failed assertion would hang CI rather than report.
+
+  const AD_SCAN = `Nmap scan report for dc01.corp.local (10.10.11.50)
+53/tcp   open  domain        Simple DNS Plus
+88/tcp   open  kerberos-sec  Microsoft Windows Kerberos
+135/tcp  open  msrpc         Microsoft Windows RPC
+389/tcp  open  ldap          Microsoft Windows Active Directory LDAP
+445/tcp  open  microsoft-ds?
+5985/tcp open  http          Microsoft HTTPAPI httpd 2.0`;
+
+  const LINUX_SCAN = `Nmap scan report for 10.10.10.3
+22/tcp open  ssh     OpenSSH 7.2p2 Ubuntu 4ubuntu2.8
+80/tcp open  http    Apache httpd 2.4.18`;
+
+  // jsdom gives each instance its own localStorage, so a reload cannot be
+  // simulated by booting twice. Seeding before the page script runs tests the
+  // real boot path instead.
+  function bootSeeded(seed) {
+    const inject = "<body><script>" + Object.entries(seed)
+      .map(([k, v]) => "localStorage.setItem(" + JSON.stringify(k) + "," + JSON.stringify(v) + ");")
+      .join("") + "<\/script>";
+    const errors = [];
+    const vc = new VirtualConsole()
+      .on("jsdomError", e => errors.push(e.message))
+      .on("error", (...a) => errors.push(a.join(" ")));
+    const dom = new JSDOM(read("playbook.html").replace("<body>", inject), {
+      runScripts: "dangerously",
+      url: "https://example.org/playbook.html",
+      virtualConsole: vc,
+    });
+    return {dom, window: dom.window, d: dom.window.document, errors};
+  }
+
+  function harness(h) {
+    h = h || boot("playbook.html");
+    const {window, d} = h;
+    h.set = (k, v) => { const el = d.getElementById("v_" + k); el.value = v;
+      el.dispatchEvent(new window.Event("input", {bubbles: true})); };
+    h.hit = el => el.dispatchEvent(new window.MouseEvent("click", {bubbles: true}));
+    h.go = id => h.hit([...d.querySelectorAll(".track-pill")].find(p => p.dataset.id === id));
+    h.shown = row => [...d.querySelectorAll("#" + row + " .track-pill")]
+      .filter(p => !p.classList.contains("demoted")).map(p => p.dataset.id);
+    h.phases = () => [...d.querySelectorAll("#phases .phase")]
+      .map(p => ({title: p.querySelector(".ptitle").textContent, locked: p.classList.contains("locked")}));
+    h.lockedTitles = () => h.phases().filter(p => p.locked).map(p => p.title);
+    h.moves = () => [...d.querySelectorAll(".move .mt")].map(e => e.textContent);
+    h.addCred = (u, s) => {
+      h.hit(d.getElementById("addCred"));
+      const rows = [...d.querySelectorAll("#credRows input")];
+      const n = rows.length;
+      rows[n - 3].value = u; rows[n - 3].dispatchEvent(new window.Event("input", {bubbles: true}));
+      rows[n - 2].value = s; rows[n - 2].dispatchEvent(new window.Event("input", {bubbles: true}));
+    };
+    h.scan = text => {
+      const ta = d.getElementById("scanInput");
+      ta.value = text; ta.dispatchEvent(new window.Event("input", {bubbles: true}));
+      h.hit(d.getElementById("genBtn"));
+    };
+    return h;
+  }
+
+  // run a case against a harness and always close the window
+  const flow = fn => () => { const h = harness(); try { fn(h); } finally { h.window.close(); } };
+
+  test("the front door is the scan, not a menu of everything", flow(h => {
+    const d = h.d;
+    assert.deepEqual(h.errors, [], "script errors on load");
+    assert.ok(d.querySelector(".intake #scanInput"), "the scan intake is not on the overview");
+    assert.ok(!d.querySelector(".boxtype"), "the board rendered before there was any scan");
+
+    // With nothing to go on, only recon has a reason to be on screen...
+    assert.deepEqual(h.shown("tracks"), ["__overview", "recon"]);
+    // ...but nothing is ever actually removed.
+    assert.equal(d.querySelectorAll("#tracks .track-pill").length, 12, "demoted tracks left the DOM");
+    assert.match(d.querySelector("#tracks .morepill").textContent, /\+10 more/);
+  }));
+
+  test("a domain controller scan routes the whole page to Active Directory", flow(h => {
+    h.set("BOX", "dc");
+    h.scan(AD_SCAN);
+    h.go("__overview");
+
+    assert.match(h.d.querySelector(".boxtype .bt").textContent, /Active Directory/, "box type wrong");
+    assert.equal(h.d.getElementById("v_IP").value, "10.10.11.50", "IP not adopted from the scan");
+    assert.equal(h.shown("tracks")[1], "ad", "AD is not the first suggested track");
+    assert.match(h.d.querySelector('.track-pill[data-id="ad"] .why').textContent, /88/,
+      "the pill does not say why it was suggested");
+    assert.match(h.d.querySelector(".boxtype .genbtn").textContent, /Active Directory/,
+      "the call to action disagrees with the ranking");
+    assert.ok(h.moves().some(m => /first credential/i.test(m)),
+      "no-creds-on-a-DC should suggest getting one: " + h.moves().join(" | "));
+  }));
+
+  test("AD attack phases stay locked until a credential exists", flow(h => {
+    h.set("BOX", "dc2");
+    h.scan(AD_SCAN);
+    h.go("ad");
+
+    const before = h.phases();
+    assert.equal(before[0].locked, false, "the no-creds phase should be workable");
+    assert.ok(before.slice(1).every(p => p.locked),
+      "post-credential phases should be locked: " + JSON.stringify(before));
+    assert.match(h.d.querySelector("#phases .lockbadge").textContent, /domain credential/,
+      "a locked phase must say what it is waiting for");
+
+    // locked steps stay visible -- seeing what comes next is the point -- but
+    // they are not tickable
+    const locked = h.d.querySelector("#phases .step.locked input[type=checkbox]");
+    assert.ok(locked, "locked steps were hidden rather than disabled");
+    assert.equal(locked.disabled, true, "a locked step was tickable");
+
+    h.addCred("svc_sql", "Summer2024!");
+    h.go("ad");
+    assert.deepEqual(h.lockedTitles(), [], "phases stayed locked after a credential was recorded");
+    h.go("__overview");
+    assert.ok(h.moves().some(m => /BloodHound/i.test(m)),
+      "with a credential the board should suggest mapping the domain: " + h.moves().join(" | "));
+  }));
+
+  test("a foothold unlocks the privesc phases and the tools that need a shell", flow(h => {
+    h.set("BOX", "lin");
+    h.scan(LINUX_SCAN);
+    h.go("linux");
+
+    assert.deepEqual(h.lockedTitles(), ["Local enumeration", "Escalate to root", "Loot"]);
+    const suid = () => h.d.querySelector('#tools .track-pill[data-id="__suid"]');
+    assert.ok(suid().classList.contains("demoted"), "SUID xref offered before there is a shell");
+
+    // ticking a step in a phase that gives:"shell" is the only thing that moves it
+    const cb = h.d.querySelector("#phases .step:not(.locked) input[type=checkbox]");
+    cb.checked = true;
+    cb.dispatchEvent(new h.window.Event("change", {bubbles: true}));
+
+    assert.deepEqual(h.lockedTitles(), [], "a shell did not unlock the later phases");
+    assert.ok(!suid().classList.contains("demoted"), "SUID xref still folded away with a shell");
+    h.go("__overview");
+    assert.ok(h.moves().some(m => /privilege escalation/i.test(m)),
+      "board did not move on to privesc: " + h.moves().join(" | "));
+  }));
+
+  test("locked steps do not dilute the progress count", flow(h => {
+    h.set("BOX", "prog");
+    h.scan(AD_SCAN);
+    h.go("ad");
+
+    const open = h.d.querySelectorAll("#phases .step:not(.locked)").length;
+    assert.ok(h.d.querySelectorAll("#phases .step.locked").length > 0, "expected locked steps here");
+    assert.ok(open > 0 && open < h.d.querySelectorAll("#phases .step").length);
+    assert.match(h.d.getElementById("plabel").textContent, new RegExp("0 ticked / " + open + "$"),
+      "the bar counted steps you cannot yet tick: " + h.d.getElementById("plabel").textContent);
+  }));
+
+  test("the credential table is the source for USER and PASS", flow(h => {
+    h.set("BOX", "creds");
+    assert.ok(!h.d.getElementById("vars").classList.contains("open"),
+      "the extra variable fields should start folded");
+
+    h.addCred("admin", "Pass123!");
+    assert.equal(h.d.getElementById("v_USER").value, "admin", "USER not adopted from the table");
+    assert.equal(h.d.getElementById("v_PASS").value, "Pass123!", "PASS not adopted from the table");
+    assert.ok(h.d.getElementById("vars").classList.contains("open"),
+      "the fields should reveal themselves once they hold something");
+
+    // a second row does not steal the pair, but "set" promotes it on demand
+    h.addCred("svc", "Other456!");
+    assert.equal(h.d.getElementById("v_USER").value, "admin", "a later row overwrote the live credential");
+    const setBtns = [...h.d.querySelectorAll("#credRows button")].filter(b => b.textContent === "set");
+    assert.equal(setBtns.length, 2, "every credential row should offer 'set'");
+    h.hit(setBtns[1]);
+    assert.equal(h.d.getElementById("v_USER").value, "svc", "'set' did not promote the second row");
+    assert.equal(h.d.getElementById("v_PASS").value, "Other456!");
+  }));
+
+  test("header actions collapse into menus without going missing", flow(h => {
+    const d = h.d;
+    assert.equal(d.querySelectorAll(".boxbar > button.txtbtn").length, 0,
+      "box actions should live in the menu, not loose in the bar");
+    for (const id of ["boxNew", "boxDup", "boxDel", "boxExport", "boxImport"]) {
+      assert.ok(d.querySelector("#boxMenu .menu-body #" + id), id + " missing from the box menu");
+    }
+    for (const id of ["expandAll", "collapseAll", "resetProg"]) {
+      assert.ok(d.querySelector("#viewMenu .menu-body #" + id), id + " missing from the view menu");
+    }
+    // BOX and IP are the only two you need on minute one
+    assert.equal(d.querySelectorAll("#vars > .field").length, 2, "too many always-on variable fields");
+    assert.equal(d.querySelectorAll("#varsMoreRow .field").length, 5, "the folded fields went missing");
+    for (const k of ["BOX", "IP", "LHOST", "LPORT", "DOMAIN", "USER", "PASS"]) {
+      assert.ok(d.getElementById("v_" + k), "v_" + k + " no longer exists");
+    }
+  }));
+
+  test("target variables are per-box, and fill the commands", flow(h => {
+    h.set("BOX", "vbox");
+    h.set("IP", "10.10.10.9");
+    h.set("LHOST", "10.8.0.5");
+    assert.ok(h.window.localStorage.getItem("vars2:vbox"), "variables were not saved for the box");
+
+    // a different box starts clean rather than inheriting them...
+    h.set("BOX", "other");
+    assert.equal(h.d.getElementById("v_IP").value, "", "the second box inherited the first box's IP");
+    // ...and coming back restores them
+    h.set("BOX", "vbox");
+    assert.equal(h.d.getElementById("v_IP").value, "10.10.10.9", "IP did not come back");
+    assert.equal(h.d.getElementById("v_LHOST").value, "10.8.0.5", "LHOST did not come back");
+
+    h.go("recon");
+    const filled = [...h.d.querySelectorAll("#phases .tok.filled")].map(e => e.textContent);
+    assert.ok(filled.includes("10.10.10.9"), "the restored IP did not fill into any command");
+  }));
+
+  test("a reload reopens the last box with its variables", () => {
+    // what localStorage looks like after working a box, then reloading
+    const h = bootSeeded({
+      "toolkit:vars": JSON.stringify({IP: "10.10.10.9", BOX: "vbox"}),
+      "toolkit:boxes": JSON.stringify(["vbox"]),
+      "vars2:vbox": JSON.stringify({IP: "10.10.10.9", LHOST: "10.8.0.5", LPORT: "", DOMAIN: "", USER: "", PASS: ""}),
+      "scan2:vbox": JSON.stringify([{port: "22", proto: "tcp", service: "ssh", version: "OpenSSH 7.2"}]),
+    });
+    try {
+      assert.deepEqual(h.errors, [], "script errors on load");
+      assert.equal(h.d.getElementById("v_BOX").value, "vbox", "the last box was not reopened");
+      assert.equal(h.d.getElementById("v_IP").value, "10.10.10.9", "IP was lost across a reload");
+      assert.equal(h.d.getElementById("v_LHOST").value, "10.8.0.5", "LHOST was lost across a reload");
+      // and the restored scan drives the board, not the empty state
+      assert.ok(h.d.querySelector(".boxtype"), "the board did not render from the restored scan");
+      assert.ok(!h.d.querySelector(".intake"), "the intake rendered despite a saved scan");
+    } finally { h.window.close(); }
+  });
+
+  test("upgrading from pre-1.10 state keeps the variables it only had shared", () => {
+    // what a v1.9.x user's storage looks like: toolkit:vars holds the live
+    // variables, and no vars2:<box> exists yet
+    const h = bootSeeded({
+      "toolkit:vars": JSON.stringify({IP: "10.10.10.4", LHOST: "10.8.0.2", BOX: "old"}),
+      "toolkit:boxes": JSON.stringify(["old"]),
+      "playbook2:old": JSON.stringify({"linux:p1s0": true}),
+    });
+    try {
+      assert.deepEqual(h.errors, [], "script errors on load");
+      assert.equal(h.d.getElementById("v_IP").value, "10.10.10.4", "upgrade blanked the IP");
+      assert.equal(h.d.getElementById("v_LHOST").value, "10.8.0.2", "upgrade blanked LHOST");
+      // and it is adopted into per-box storage, so a later box switch keeps it
+      const saved = JSON.parse(h.window.localStorage.getItem("vars2:old"));
+      assert.equal(saved.IP, "10.10.10.4", "the migrated variables were not persisted per box");
+    } finally { h.window.close(); }
+  });
+
+  test("a second scan replaces the hostname the first one set", flow(h => {
+    h.set("BOX", "one");
+    h.scan(AD_SCAN);
+    assert.equal(h.d.getElementById("v_DOMAIN").value, "dc01.corp.local");
+
+    // a different box must not inherit the first one's domain -- the board puts
+    // it in a headline, so a stale one is now visibly wrong
+    h.set("BOX", "two");
+    h.go("__planner");
+    h.scan(`Nmap scan report for dc02.other.local (10.10.11.51)
+88/tcp  open  kerberos-sec
+389/tcp open  ldap`);
+    assert.equal(h.d.getElementById("v_DOMAIN").value, "dc02.other.local");
+
+    // but something typed by hand is left alone
+    h.set("DOMAIN", "typed.by.hand");
+    h.go("__planner");
+    h.scan(AD_SCAN);
+    assert.equal(h.d.getElementById("v_DOMAIN").value, "typed.by.hand",
+      "a hand-typed domain was overwritten by a scan");
+  }));
+
+  test("demoting a track or tool never makes it unreachable", flow(h => {
+    h.set("BOX", "reach");
+    h.scan(LINUX_SCAN);
+    assert.equal(h.d.querySelectorAll("#tracks .track-pill").length, 12);
+    assert.equal(h.d.querySelectorAll("#tools .track-pill").length, 8);
+
+    const more = h.d.querySelector("#tracks .morepill");
+    assert.ok(more, "no disclosure for the demoted tracks");
+    h.hit(more);
+    assert.ok(h.d.getElementById("tracks").classList.contains("show-all"), "'more' did not reveal them");
+    assert.match(more.textContent, /less/);
+
+    // a demoted track still renders when clicked
+    h.go("bof");
+    assert.equal(h.d.getElementById("thName").textContent, "Buffer overflow");
+  }));
 }

