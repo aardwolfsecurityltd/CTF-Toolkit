@@ -126,8 +126,13 @@ a finished box and delete it rather than keeping dozens around.
 Shortcuts are ignored while you are typing in a field. The arsenal uses `/` and `Ctrl-K`
 to focus its search, and `Esc` to clear it.
 
+The playbook opens on the **recon track** — that is where you start, and it stays the
+landing view however much work is already saved. The scan-driven board is the `Overview`
+pill, or `0`.
+
 The current view lives in the URL — `playbook.html#track=ad`, `#tool=writeup` — so it can
-be linked and bookmarked, and a reload puts you back where you were.
+be linked and bookmarked, a reload puts you back where you were, and a link like that
+beats the recon default.
 
 ## Running it online
 
@@ -168,7 +173,7 @@ The shell scripts obviously only run locally.
 
 ## Versions
 
-`v1.11.0`. The version shows in the nav bar of every page, so you can tell whether an
+`v1.11.1`. The version shows in the nav bar of every page, so you can tell whether an
 offline copy is current. Tagging `v*` builds an offline zip and attaches it to the release;
 the repo does not carry a bundle that can go stale.
 

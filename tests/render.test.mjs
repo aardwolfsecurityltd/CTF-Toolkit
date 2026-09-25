@@ -740,7 +740,10 @@ if (JSDOM) {
       assert.equal(h.d.getElementById("v_BOX").value, "vbox", "the last box was not reopened");
       assert.equal(h.d.getElementById("v_IP").value, "10.10.10.9", "IP was lost across a reload");
       assert.equal(h.d.getElementById("v_LHOST").value, "10.8.0.5", "LHOST was lost across a reload");
-      // and the restored scan drives the board, not the empty state
+      // the page still opens on recon, and the restored scan drives the board
+      // once you go to it
+      assert.equal(h.d.getElementById("thName").textContent, "Recon", "a reload did not open on recon");
+      harness(h).go("__overview");
       assert.ok(h.d.querySelector(".boxtype"), "the board did not render from the restored scan");
       assert.ok(!h.d.querySelector(".intake"), "the intake rendered despite a saved scan");
     } finally { h.window.close(); }
@@ -762,6 +765,56 @@ if (JSDOM) {
       const saved = JSON.parse(h.window.localStorage.getItem("vars2:old"));
       assert.equal(saved.IP, "10.10.10.4", "the migrated variables were not persisted per box");
     } finally { h.window.close(); }
+  });
+
+  test("the page opens on recon whatever is already in storage", () => {
+    // The landing rule used to defer to the remembered view and to fall back to
+    // the board whenever a scan existed. Between them the page opened on recon
+    // exactly once -- on a first-ever visit -- and never again, which is not
+    // what "open on recon" means to anyone who has used the tool before.
+    const SCAN = JSON.stringify([{port: "88", proto: "tcp", service: "kerberos-sec"}]);
+    const cases = [
+      ["nothing in storage", {}],
+      ["a remembered overview", {"view2:_default": "overview"}],
+      ["a remembered track", {"view2:_default": "track=web"}],
+      ["a saved scan", {"scan2:_default": SCAN}],
+      ["a worked box", {
+        "toolkit:vars": JSON.stringify({BOX: "dc01", IP: "10.10.11.50"}),
+        "toolkit:boxes": JSON.stringify(["dc01"]),
+        "scan2:dc01": SCAN, "view2:dc01": "overview",
+        "playbook2:dc01": JSON.stringify({"ad:p1s0": true}),
+      }],
+    ];
+    for (const [label, seed] of cases) {
+      const h = bootSeeded(seed);
+      try {
+        assert.deepEqual(h.errors, [], "script errors on load with " + label);
+        assert.equal(h.d.getElementById("thName").textContent, "Recon",
+          "did not open on recon with " + label);
+        const active = h.d.querySelector(".track-pill.active");
+        assert.equal(active && active.dataset.id, "recon",
+          "recon is not the highlighted pill with " + label);
+      } finally { h.window.close(); }
+    }
+  });
+
+  test("a deep link still beats the recon default", () => {
+    for (const [hash, expect] of [["#track=ad", "Active Directory"], ["#track=linux", "Linux"]]) {
+      const errors = [];
+      const vc = new VirtualConsole()
+        .on("jsdomError", e => errors.push(e.message))
+        .on("error", (...a) => errors.push(a.join(" ")));
+      const dom = new JSDOM(read("playbook.html"), {
+        runScripts: "dangerously",
+        url: "https://example.org/playbook.html" + hash,
+        virtualConsole: vc,
+      });
+      try {
+        assert.deepEqual(errors, [], "script errors on load for " + hash);
+        assert.equal(dom.window.document.getElementById("thName").textContent, expect,
+          hash + " did not survive the recon default");
+      } finally { dom.window.close(); }
+    }
   });
 
   test("a second scan replaces the hostname the first one set", flow(h => {

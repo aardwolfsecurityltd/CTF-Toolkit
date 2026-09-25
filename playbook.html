@@ -1169,7 +1169,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.11.0";
+const APP_VERSION="1.11.1";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
@@ -3641,14 +3641,18 @@ function applyView(v){
     return false;
   }finally{_applyingView=false;}
 }
-// Recon is where you start, so that is where the page opens. Once there is a
-// scan the board is the more useful landing -- it summarises what was found --
-// but by then you have almost always been somewhere, and the remembered view
-// wins over both.
-function defaultView(){return loadScan().length?"overview":"track=recon";}
+// Recon is where you start, so that is where the page opens -- always, and not
+// only on a first-ever visit. This used to defer to the remembered view and to
+// fall back to the board whenever a scan existed, which between them meant the
+// page opened on recon exactly once and never again.
+//
+// A hash in the URL still wins, so deep links stay shareable and a reload puts
+// you back where you were. view2 is still written: the hashchange handler uses
+// it to tell a hash it set itself from one you navigated to.
+const LANDING_VIEW="track=recon";
 function currentView(){
   const h=(location.hash||"").replace(/^#/,"");
-  return h||store.get("view2:"+boxId(),"")||defaultView();
+  return h||LANDING_VIEW;
 }
 
 // ---------- live cues in the stuck panel ----------
@@ -4132,7 +4136,7 @@ refreshChrome();
 document.getElementById("drawer").addEventListener("toggle",e=>{if(e.target.open)renderStuckLive();});
 document.querySelector(".stuck details").addEventListener("toggle",e=>{if(e.target.open)renderStuckLive();});
 
-if(!applyView(currentView())&&!applyView(defaultView()))renderOverview();
+if(!applyView(currentView())&&!applyView(LANDING_VIEW))renderOverview();
 </script>
 </body>
 </html>
