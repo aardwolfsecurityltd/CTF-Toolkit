@@ -63,6 +63,7 @@ test("svcKey routes the ports the toolkit claims to cover", () => {
   const cases = [
     [21, "ftp", "ftp"], [22, "ssh", "ssh"], [79, "finger", "finger"],
     [88, "kerberos-sec", "kerberos"], [445, "microsoft-ds", "smb"],
+    [135, "msrpc", "msrpc"], [593, "http-rpc-epmap", "msrpc"],
     [389, "ldap", "ldap"], [873, "rsync", "rsync"], [1099, "java-rmi", "rmi"],
     [1433, "ms-sql-s", "mssql"], [1521, "oracle-tns", "oracle"],
     [2375, "docker", "docker"], [3306, "mysql", "mysql"], [3389, "ms-wbt-server", "rdp"],

