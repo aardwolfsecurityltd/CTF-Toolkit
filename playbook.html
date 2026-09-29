@@ -715,10 +715,10 @@ const TRACKS=[
     l:"Sensible built-in wordlist and extensions, good when you want zero setup. Add <code>-r</code> only if you want recursion."},
    {d:"Last resort when little is installed: dirb",c:"dirb http://{HOST} /usr/share/wordlists/dirb/common.txt -r",
     l:"Old but present almost everywhere. <code>-r</code> keeps it non-recursive."},
-   {d:"Virtual host fuzzing when the site uses a name",c:"ffuf -u http://{HOST} -H 'Host: FUZZ.{DOMAIN}' -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -fs 0",
-    l:"Filter the baseline size with <code>-fs</code>. Each vhost is a fresh attack surface."},
-   {d:"Fuzz for the parameter, not just the path \u2014 a page that ignores you may just want a different name",c:"ffuf -u 'http://{HOST}/index.php?FUZZ=test' -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt -fs <baseline-size>\n# values for a parameter you already know:\nwfuzz -c -z file,/usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt --hw <baseline-words> 'http://{HOST}/index.php?FUZZ=test'",
-    l:"Directory brute force finds <code>admin.php</code>; this finds the <code>?debug=</code>, <code>?file=</code> or <code>?cmd=</code> that makes it interesting. Get a baseline response first and filter on it (<code>-fs</code> by size, <code>-fw</code> by words, <code>-fc</code> by code) or every wordlist entry looks like a hit. The same trick finds hidden POST fields \u2014 put <code>FUZZ</code> in the body with <code>-d</code> and <code>-X POST</code>."},
+   {d:"Virtual host fuzzing when the site uses a name",c:"ffuf -u http://{HOST} -H 'Host: FUZZ.{DOMAIN}' -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -ac\n# still noisy? -ach calibrates per host, or measure the default vhost and filter it:  -fs <size>",
+    l:"<code>-ac</code> learns the default vhost's response from a few junk names and filters it, which is what you want here: every wrong guess returns the same catch-all page. Each vhost that survives is a fresh attack surface, so add it to <code>/etc/hosts</code> and re-run your web enumeration against the <i>name</i>."},
+   {d:"Fuzz for the parameter, not just the path \u2014 a page that ignores you may just want a different name",c:"ffuf -u 'http://{HOST}/index.php?FUZZ=test' -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt -ac -c\n# auto-calibration fooled? measure the baseline yourself and filter on it:\nffuf -u 'http://{HOST}/index.php?FUZZ=test' -w burp-parameter-names.txt -fs <size>   # -fw words, -fc code, -fr regex\n# values for a parameter you already know:\nwfuzz -c -z file,burp-parameter-names.txt --hw <baseline-words> 'http://{HOST}/index.php?FUZZ=test'",
+    l:"Directory brute force finds <code>admin.php</code>; this finds the <code>?debug=</code>, <code>?file=</code> or <code>?cmd=</code> that makes it interesting. Without a filter every wordlist entry looks like a hit, so start with <b><code>-ac</code></b> \u2014 ffuf fires a few junk values first, learns what \"nothing happened\" looks like, and filters that automatically. It only fails when a real hit is indistinguishable from the baseline, and then you measure it yourself (<code>-fs</code> size, <code>-fw</code> words, <code>-fc</code> code, <code>-fr</code> regex). The same trick finds hidden POST fields: put <code>FUZZ</code> in the body with <code>-d</code> and <code>-X POST</code>."},
    {d:"HTTPS? the certificate and the TLS config are both free intelligence",c:"sslscan {HOST}:443   # or: testssl.sh https://{HOST}\nopenssl s_client -connect {HOST}:443 </dev/null 2>/dev/null | openssl x509 -noout -text | grep -E 'Subject:|DNS:'",
     l:"The certificate names hosts \u2014 <b>Subject Alternative Names are vhosts you have not found yet</b>, and internal hostnames and email addresses in the Subject are usernames to spray. On an old target the same scan flags Heartbleed (CVE-2014-0160, which dumps 64KB of server memory per request) and POODLE; <code>nmap -p443 --script ssl-heartbleed,ssl-poodle {HOST}</code> checks both directly."},
    {d:"Dump an exposed git repo",c:"git-dumper http://{HOST}/.git/ loot/gitdump",
@@ -1189,7 +1189,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.12.0";
+const APP_VERSION="1.12.1";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses

