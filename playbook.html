@@ -430,6 +430,10 @@ body.overlay-open{overflow:hidden}
 .gate b{color:var(--ink);font-family:var(--mono);font-size:12px}
 .lockbadge{font-family:var(--mono);font-size:10.5px;color:var(--faint);
   border:1px solid var(--line);border-radius:4px;padding:1.5px 7px;white-space:nowrap}
+.optbadge{font-family:var(--mono);font-size:10.5px;color:#34d399;
+  border:1px solid color-mix(in srgb,#34d399 40%,var(--line));border-radius:4px;padding:1.5px 7px;white-space:nowrap}
+.phase.optional>summary{opacity:.72}
+.phase.optional[open]>summary{opacity:1}
 
 /* ---------- ranked pills ---------- */
 .pillrow .track-pill.demoted{display:none}
@@ -663,8 +667,10 @@ const TRACKS=[
     l:"<b>Confirm LHOST is your VPN IP</b> (tun0, usually 10.x), not your LAN address. Every reverse shell depends on it."},
    {d:"Make a per-box workspace",c:"mkdir -p ~/boxes/{BOX}/{scans,loot,web,exploit} && cd ~/boxes/{BOX}",
     l:"One folder per box, screenshot as you go."},
-   {d:"Add the hostname to /etc/hosts the moment you see one",c:"echo '{IP} {DOMAIN}' | sudo tee -a /etc/hosts",
-    l:"Apps redirect to a name and break on the raw IP. The most missed step on web boxes."}
+   {d:"Add the hostname to /etc/hosts the moment you see one",c:"echo '{IP} {DOMAIN}' | sudo tee -a /etc/hosts\n# a DC answers to several names — put the FQDN, the domain and the short name on ONE line:\necho '{IP} dc01.{DOMAIN} {DOMAIN} dc01' | sudo tee -a /etc/hosts",
+    l:"Apps redirect to a name and break on the raw IP — the most missed step on web boxes. On a domain box one IP usually answers to <b>several</b> names: the FQDN (<code>dc01.{DOMAIN}</code>), the domain itself (<code>{DOMAIN}</code>, which Kerberos and LDAP need), and the bare hostname. Keep them on <b>one line</b> after the IP where you can — forward resolution works from any matching line, but a single line is tidier and keeps reverse lookups (<code>IP -> name</code>) pointing at the right name. Read the real names off the nmap <code>smb-os-discovery</code> / <code>ldap-rootdse</code> output rather than guessing."},
+   {d:"Found another name later (a vhost, a second FQDN)? map it too",c:"echo '{IP} mail.{DOMAIN}' | sudo tee -a /etc/hosts\n# prefer it all on one line? rewrite the IP's line instead of adding another:\nsudo sed -i '\\|^{IP}[[:space:]]|d' /etc/hosts; echo '{IP} dc01.{DOMAIN} {DOMAIN} dc01 mail.{DOMAIN}' | sudo tee -a /etc/hosts",
+    l:"A web vhost, a mail name in a certificate, an intranet host named in a page — these turn up after you already have a hosts entry, and each is a fresh surface that only resolves once it is mapped. <b>The one-line append just works</b>: forward name resolution reads every matching line, so a second line for the same IP is fine. The <code>sed</code> variant is only if you would rather keep one tidy line per box (it deletes the IP's current line, then re-adds it with the extra name). The vhost-fuzzing step in the web track finds the names nobody handed you."}
  ],tips:["Start a notes file now. By hour three you will not remember which cred worked where.",
    "<b>Golden rule:</b> record every version number and every credential the instant you find it, with its source."]},
  {n:1,title:"Port discovery",tag:"recon",goal:"Every open port and the exact service and version",steps:[
@@ -906,7 +912,8 @@ const TRACKS=[
 {id:"ad",name:"Active Directory",colour:COL.ad,
  blurb:"The AD kill chain: from no credentials to Domain Admin. Reference: The Hacker Recipes.",
  phases:[
- {n:1,title:"No creds (external foothold)",tag:"recon \u2192 attack",goal:"Get your first username or password",steps:[
+ {n:1,title:"No creds (external foothold)",tag:"recon \u2192 attack",goal:"Get your first username or password",
+  optionalWhen:c=>c.creds>0,optionalNote:"have a cred \u2014 skip unless roasting others",steps:[
    {when:c=>c.creds>0,needs:"a domain credential",d:"Read LAPS and gMSA passwords (if your user may)",c:"nxc ldap {IP} -u {USER} -p {PASS} --laps; nxc ldap {IP} -u {USER} -p {PASS} --gmsa",l:"LAPS stores the local-admin password on the computer object (ms-Mcs-AdmPwd); gMSA accounts hand out their own password to those allowed to read it (gMSADumper.py). BloodHound flags who can read each. The Timelapse / Support paths."},
    {d:"Recover a deleted account from the AD Recycle Bin",c:"Get-ADObject -SearchBase \"CN=Deleted Objects,$(([ADSI]'').distinguishedName)\" -IncludeDeletedObjects -Filter * -Properties * | select samAccountName,lastKnownParent",l:"Deleted objects keep their attributes \u2014 a decommissioned admin\u2019s password often still works. The Cascade root."},
    {d:"Enumerate valid users",c:"kerbrute userenum -d {DOMAIN} --dc {IP} /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt",
@@ -1193,7 +1200,7 @@ const TRACKS=[
 ]}
 ];
 
-const APP_VERSION="1.12.2";
+const APP_VERSION="1.13.0";
 
 // ---------- storage ----------
 // Everything lives in localStorage, so a private window or a full quota loses
@@ -1536,12 +1543,17 @@ function renderTrack(track){
   host.appendChild(toolbar(host,track.name));
   track.phases.forEach(ph=>{
     const det=document.createElement("details");det.className="phase";det.style.setProperty("--c",track.colour);
-    if(ph.n<=1&&!(ph.when&&!ph.when(ctx)))det.open=true;
-    const sum=document.createElement("summary");
     const gated=!!(ph.when&&!ph.when(ctx));
+    // "optional" is not "locked": the steps stay usable, but when the state
+    // says you did not need this phase it opens collapsed with a soft badge.
+    const optional=!gated&&!!(ph.optionalWhen&&ph.optionalWhen(ctx));
+    if(ph.n<=1&&!gated&&!optional)det.open=true;
+    if(optional)det.classList.add("optional");
+    const sum=document.createElement("summary");
     sum.innerHTML=`<span class="num">${ph.n}</span><span class="phead"><div class="ptitle">${ph.title}</div>`+
       `<div class="pgoal">${ph.goal}</div></span><span class="pmeta">`+
       (gated?`<span class="lockbadge">needs ${escapeHtml(ph.needs||"more progress")}</span>`:"")+
+      (optional?`<span class="optbadge">${escapeHtml(ph.optionalNote||"optional")}</span>`:"")+
       `<span class="ptag">${ph.tag}</span>`+
       `<span class="pcount"></span><span class="chev">\u203A</span></span>`;
     det.appendChild(sum);
@@ -3883,8 +3895,10 @@ function rankTracks(){
 // appear when the context says they matter, or when you ask for them.
 let _varsPref=null;   // null = follow the context, true/false = you decided
 function varsAuto(){
-  return ctx.shell!=="none"||ctx.isAD||ctx.creds>0||
-    ["LHOST","LPORT","DOMAIN","USER","PASS"].some(k=>VARS[k]);
+  // The target fields fill every command on the page, so they are shown by
+  // default now rather than folded behind "more". The toggle still collapses
+  // them for anyone who wants a tighter bar, and that choice is remembered.
+  return true;
 }
 function syncVarFields(){
   const vars=document.getElementById("vars"),btn=document.getElementById("varsMore");

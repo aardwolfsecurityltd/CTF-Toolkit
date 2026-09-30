@@ -636,6 +636,31 @@ if (JSDOM) {
       "with a credential the board should suggest mapping the domain: " + h.moves().join(" | "));
   }));
 
+  test("given a credential, the AD unauth phase is optional, not locked", flow(h => {
+    // no credential: the no-creds phase is the way in, open, and the phases
+    // after it are locked
+    h.set("BOX", "adopt");
+    h.scan(AD_SCAN);
+    h.go("ad");
+    const p1 = () => h.d.querySelectorAll("#phases .phase")[0];
+    assert.match(p1().querySelector(".ptitle").textContent, /No creds/);
+    assert.equal(p1().hasAttribute("open"), true, "the no-creds phase should be open when you have none");
+    assert.ok(!p1().classList.contains("optional"), "should not be optional without a credential");
+    assert.ok(h.lockedTitles().includes("First creds"), "later phases should be locked without a credential");
+
+    // record a credential: the unauth phase is now optional (collapsed, badged,
+    // but still usable - you may roast others), and the rest unlock
+    h.addCred("svc", "Summer2024!");
+    h.go("ad");
+    assert.ok(p1().classList.contains("optional"), "the no-creds phase should be optional once you have a credential");
+    assert.equal(p1().hasAttribute("open"), false, "an optional phase should open collapsed");
+    assert.match(p1().querySelector(".optbadge").textContent, /skip/i, "it should say it can be skipped");
+    assert.deepEqual(h.lockedTitles(), [], "recording a credential should unlock the rest of the track");
+    // optional is not locked: the steps stay tickable
+    const cb = p1().querySelector(".step:not(.locked) input[type=checkbox]");
+    assert.ok(cb && !cb.disabled, "an optional phase's steps must stay usable");
+  }));
+
   test("a foothold unlocks the privesc phases and the tools that need a shell", flow(h => {
     h.set("BOX", "lin");
     h.scan(LINUX_SCAN);
@@ -671,14 +696,17 @@ if (JSDOM) {
 
   test("the credential table is the source for USER and PASS", flow(h => {
     h.set("BOX", "creds");
+    // the target fields are shown by default now (they fill every command), but
+    // the toggle still collapses them and the choice sticks
+    assert.ok(h.d.getElementById("vars").classList.contains("open"),
+      "the target fields should be visible by default");
+    h.hit(h.d.getElementById("varsMore"));
     assert.ok(!h.d.getElementById("vars").classList.contains("open"),
-      "the extra variable fields should start folded");
+      "the toggle should collapse the extra fields");
 
     h.addCred("admin", "Pass123!");
     assert.equal(h.d.getElementById("v_USER").value, "admin", "USER not adopted from the table");
     assert.equal(h.d.getElementById("v_PASS").value, "Pass123!", "PASS not adopted from the table");
-    assert.ok(h.d.getElementById("vars").classList.contains("open"),
-      "the fields should reveal themselves once they hold something");
 
     // a second row does not steal the pair, but "set" promotes it on demand
     h.addCred("svc", "Other456!");
